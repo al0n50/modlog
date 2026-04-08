@@ -8,6 +8,7 @@ import AddWishForm from '../components/mods/AddWishForm'
 import ModCategoryBadge from '../components/mods/ModCategoryBadge'
 import PromoteModModal from '../components/mods/PromoteModModal'
 import BuildTimeline from '../components/timeline/BuildTimeline'
+import AIAdvisor from '../components/garage/AIAdvisor'
 
 const SECTIONS = ['Overview', 'Mods', 'Wishlist', 'Timeline']
 
@@ -230,6 +231,7 @@ export default function VehicleDetailPage() {
                 </div>
               ))}
             </div>
+            <AIAdvisor vehicle={car} />
           </div>
         )}
 
