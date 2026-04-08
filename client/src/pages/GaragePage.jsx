@@ -1,40 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useGarageStore } from '../store/useGarageStore'
+import AddVehicleModal from '../components/garage/AddVehicleModal'
 
 export default function GaragePage() {
   const { user, signOut } = useAuthStore()
   const { vehicles, loading, fetchVehicles, addVehicle, deleteVehicle, addMod, deleteMod, addWishItem, deleteWishItem, promoteWishItem } = useGarageStore()
 
-  const [showForm, setShowForm] = useState(false)
-  const [newCar, setNewCar] = useState({ year: '', make: '', model: '', trim: '', cover_image: '' })
+  const [showModal, setShowModal] = useState(false)
   const [modInputs, setModInputs] = useState({})
   const [wishInputs, setWishInputs] = useState({})
   const [activeTab, setActiveTab] = useState({})
-  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (user) fetchVehicles(user.id)
   }, [user])
 
   const getTab = (id) => activeTab[id] ?? 'installed'
-
-  const handleAddCar = async () => {
-    if (!newCar.year || !newCar.make || !newCar.model) return
-    setSubmitting(true)
-    try {
-      await addVehicle({
-        year: parseInt(newCar.year),
-        make: newCar.make,
-        model: newCar.model,
-        trim: newCar.trim,
-        cover_image: newCar.cover_image || `https://placehold.co/600x400/1a1a1a/orange?text=${newCar.make}+${newCar.model}`,
-      }, user.id)
-      setShowForm(false)
-      setNewCar({ year: '', make: '', model: '', trim: '', cover_image: '' })
-    } catch (e) { alert(e.message) }
-    finally { setSubmitting(false) }
-  }
 
   const handleAddMod = async (vehicleId) => {
     const name = modInputs[vehicleId]?.trim()
@@ -116,7 +98,9 @@ export default function GaragePage() {
                       onClick={() => setActiveTab(p => ({ ...p, [car.id]: t }))}
                       className={`flex-1 py-2 text-sm font-medium transition-colors ${tab === t ? 'bg-orange-500 text-white' : 'text-zinc-400 hover:text-white'}`}
                     >
-                      {t === 'installed' ? `✅ Installed (${car.mods?.length ?? 0})` : `🛒 Wishlist (${car.wishlist_items?.length ?? 0})`}
+                      {t === 'installed'
+                        ? `✅ Installed (${car.mods?.length ?? 0})`
+                        : `🛒 Wishlist (${car.wishlist_items?.length ?? 0})`}
                     </button>
                   ))}
                 </div>
@@ -182,38 +166,22 @@ export default function GaragePage() {
           )
         })}
 
-        {/* Add Vehicle Form */}
-        {showForm ? (
-          <div className="bg-zinc-900 rounded-2xl p-5 shadow-lg">
-            <h3 className="text-lg font-bold mb-4">Add New Build</h3>
-            <div className="space-y-3">
-              {[['year','Year'],['make','Make'],['model','Model'],['trim','Trim (Optional)'],['cover_image','Image URL (Optional)']].map(([key, label]) => (
-                <input
-                  key={key}
-                  placeholder={label}
-                  value={newCar[key]}
-                  onChange={e => setNewCar(p => ({ ...p, [key]: e.target.value }))}
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              ))}
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button onClick={handleAddCar} disabled={submitting} className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors">
-                {submitting ? 'Saving...' : 'Save Build'}
-              </button>
-              <button onClick={() => setShowForm(false)} className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white font-semibold py-3 rounded-lg transition-colors">
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl transition-colors text-lg"
-          >
-            + Add New Build
-          </button>
+        {/* Add Vehicle Modal */}
+        {showModal && (
+          <AddVehicleModal
+            onSave={(data) => addVehicle(data, user.id)}
+            onClose={() => setShowModal(false)}
+          />
         )}
+
+        {/* Add Build Button */}
+        <button
+          onClick={() => setShowModal(true)}
+          className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl transition-colors text-lg"
+        >
+          + Add New Build
+        </button>
+
       </main>
     </div>
   )
