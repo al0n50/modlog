@@ -16,10 +16,21 @@ export const useAuthStore = create((set) => ({
 
   signUp: async (email, password, username) => {
     const { data, error } = await supabase.auth.signUp({
-      email, password,
+      email,
+      password,
       options: { data: { username } }
     })
     if (error) throw error
+
+    // Ensure profile exists even if trigger is slow
+    if (data.user) {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        username: username || email.split('@')[0],
+        display_name: username || email.split('@')[0],
+      }, { onConflict: 'id' })
+    }
+
     return data
   },
 
