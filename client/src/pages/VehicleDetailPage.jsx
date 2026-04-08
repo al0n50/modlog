@@ -80,10 +80,14 @@ export default function VehicleDetailPage() {
   }
 
   if (loading || !activeVehicle) return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <p className="text-zinc-500">Loading build...</p>
+  <div className="min-h-screen bg-zinc-950 text-white pb-12">
+    <div className="w-full h-64 bg-zinc-900 animate-pulse" />
+    <div className="max-w-2xl mx-auto px-4 mt-4 space-y-3">
+      <div className="h-8 w-2/3 bg-zinc-800 rounded-lg animate-pulse" />
+      <div className="h-4 w-1/3 bg-zinc-800 rounded-lg animate-pulse" />
     </div>
-  )
+  </div>
+)
 
   const car     = activeVehicle
   const grouped = groupedMods(car.mods)
