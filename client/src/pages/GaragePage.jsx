@@ -1,11 +1,10 @@
-import { useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/useAuthStore'
 import { useGarageStore } from '../store/useGarageStore'
 import VehicleCard from '../components/garage/VehicleCard'
 import AddVehicleModal from '../components/garage/AddVehicleModal'
 import { VehicleCardSkeleton } from '../components/ui/Skeleton'
-import { useState } from 'react'
 
 export default function GaragePage() {
   const { user } = useAuthStore()
@@ -16,11 +15,31 @@ export default function GaragePage() {
     addWishItem, deleteWishItem, promoteWishItem,
   } = useGarageStore()
 
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, setShowModal]     = useState(false)
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [showInstall, setShowInstall] = useState(false)
 
   useEffect(() => {
     if (user) fetchVehicles(user.id)
   }, [user])
+
+  // PWA install prompt
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+      setShowInstall(true)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setShowInstall(false)
+  }
 
   // Garage-wide stats
   const totalMods  = vehicles.reduce((s, v) => s + (v.mods?.length ?? 0), 0)
@@ -49,6 +68,35 @@ export default function GaragePage() {
 
       <main className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
 
+        {/* PWA Install Banner */}
+        <AnimatePresence>
+          {showInstall && (
+            <motion.div
+              initial={{ y: -60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -60, opacity: 0 }}
+              className="bg-orange-500 rounded-xl px-4 py-3 flex items-center justify-between shadow-lg shadow-orange-500/20"
+            >
+              <div>
+                <p className="text-white text-sm font-bold">Install ModLog</p>
+                <p className="text-orange-200 text-xs">Add to your home screen</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleInstall}
+                  className="bg-white text-orange-500 text-xs font-bold px-3 py-1.5 rounded-lg"
+                >
+                  Install
+                </button>
+                <button
+                  onClick={() => setShowInstall(false)}
+                  className="text-orange-200 text-xs px-2"
+                >✕</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Garage stats bar */}
         {!loading && vehicles.length > 0 && (
           <motion.div
@@ -57,9 +105,9 @@ export default function GaragePage() {
             className="grid grid-cols-3 gap-3"
           >
             {[
-              { label: 'Builds',     value: vehicles.length,                           color: 'text-orange-400' },
-              { label: 'Total Mods', value: totalMods,                                 color: 'text-green-400'  },
-              { label: 'Invested',   value: totalSpent > 0 ? `$${totalSpent.toLocaleString()}` : '—', color: 'text-blue-400' },
+              { label: 'Builds',     value: vehicles.length,                                                    color: 'text-orange-400' },
+              { label: 'Total Mods', value: totalMods,                                                          color: 'text-green-400'  },
+              { label: 'Invested',   value: totalSpent > 0 ? `$${totalSpent.toLocaleString()}` : '—',           color: 'text-blue-400'   },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
                 <p className={`text-xl font-black ${color}`}>{value}</p>
