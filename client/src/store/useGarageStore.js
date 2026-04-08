@@ -91,18 +91,26 @@ export const useGarageStore = create((set) => ({
     }))
   },
 
-  // Story 1.2 — promote wishlist item → installed mod
-  promoteWishItem: async (vehicleId, item) => {
+  // Promote wishlist item → installed mod with full carried-over metadata
+  promoteWishItem: async (vehicleId, wishItem, modData) => {
     const { data: mod, error: modErr } = await supabase
       .from('mods')
-      .insert({ name: item.name, category: item.category, vehicle_id: vehicleId })
+      .insert({
+        vehicle_id:   vehicleId,
+        name:         modData.name,
+        category:     modData.category,
+        brand:        modData.brand        || null,
+        price:        modData.price        || null,
+        install_date: modData.install_date || null,
+        notes:        modData.notes        || null,
+      })
       .select()
       .single()
 
     if (modErr) throw modErr
 
     const { error: delErr } = await supabase
-      .from('wishlist_items').delete().eq('id', item.id)
+      .from('wishlist_items').delete().eq('id', wishItem.id)
     if (delErr) throw delErr
 
     set(s => ({
@@ -110,7 +118,7 @@ export const useGarageStore = create((set) => ({
         v.id === vehicleId ? {
           ...v,
           mods: [...v.mods, mod],
-          wishlist_items: v.wishlist_items.filter(w => w.id !== item.id)
+          wishlist_items: v.wishlist_items.filter(w => w.id !== wishItem.id)
         } : v
       )
     }))
