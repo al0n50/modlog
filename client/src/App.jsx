@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useAuthStore } from './store/useAuthStore'
 import GaragePage from './pages/GaragePage'
 import AuthPage from './pages/AuthPage'
+import VehicleDetailPage from './pages/VehicleDetailPage'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuthStore()
@@ -19,9 +20,10 @@ export default function App() {
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/" element={
-        <ProtectedRoute>
-          <GaragePage />
-        </ProtectedRoute>
+        <ProtectedRoute><GaragePage /></ProtectedRoute>
+      } />
+      <Route path="/vehicle/:id" element={
+        <ProtectedRoute><VehicleDetailPage /></ProtectedRoute>
       } />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

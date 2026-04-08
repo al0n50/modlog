@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { useGarageStore } from '../store/useGarageStore'
 import AddVehicleModal from '../components/garage/AddVehicleModal'
@@ -86,7 +87,11 @@ export default function GaragePage() {
 
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-1">
-                  <h2 className="text-xl font-bold">{car.year} {car.make} {car.model}</h2>
+                  <Link to={`/vehicle/${car.id}`}>
+                    <h2 className="text-xl font-bold hover:text-orange-400 transition-colors cursor-pointer">
+                      {car.year} {car.make} {car.model}
+                    </h2>
+                  </Link>
                   {cost && (
                     <span className="text-xs bg-zinc-800 text-orange-400 border border-zinc-700 px-2 py-1 rounded-lg whitespace-nowrap font-mono">
                       💰 {cost}
