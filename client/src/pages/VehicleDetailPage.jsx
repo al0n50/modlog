@@ -9,8 +9,9 @@ import ModCategoryBadge from '../components/mods/ModCategoryBadge'
 import PromoteModModal from '../components/mods/PromoteModModal'
 import BuildTimeline from '../components/timeline/BuildTimeline'
 import AIAdvisor from '../components/garage/AIAdvisor'
+import PhotoGallery from '../components/photos/PhotoGallery'
 
-const SECTIONS = ['Overview', 'Mods', 'Wishlist', 'Timeline']
+const SECTIONS = ['Overview', 'Mods', 'Wishlist', 'Timeline', 'Photos']
 
 export default function VehicleDetailPage() {
   const { id } = useParams()
@@ -356,7 +357,15 @@ export default function VehicleDetailPage() {
           </div>
         )}
       </div>
-
+        {/* ── Photos ── */}
+        {section === 'Photos' && (
+          <div className="bg-zinc-900 rounded-2xl p-4">
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-4">
+              Build Gallery
+            </h2>
+            <PhotoGallery vehicle={car} userId={user.id} />
+          </div>
+        )}
       {/* Promote modal */}
       {promoteItem && (
         <PromoteModModal
