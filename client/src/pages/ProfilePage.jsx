@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/useAuthStore'
 import { useGarageStore } from '../store/useGarageStore'
 import { supabase } from '../lib/supabase'
 import ModCategoryBadge from '../components/mods/ModCategoryBadge'
+import FollowButton from '../components/ui/FollowButton'
 
 export default function ProfilePage() {
   const { username } = useParams()
@@ -12,13 +13,13 @@ export default function ProfilePage() {
   const { user, signOut } = useAuthStore()
   const { fetchPublicVehiclesByUser } = useGarageStore()
 
-  const [profile, setProfile]   = useState(null)
-  const [vehicles, setVehicles] = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState('')
+  const [profile, setProfile]       = useState(null)
+  const [vehicles, setVehicles]     = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState('')
   const [editingBio, setEditingBio] = useState(false)
-  const [bio, setBio]           = useState('')
-  const [savingBio, setSavingBio] = useState(false)
+  const [bio, setBio]               = useState('')
+  const [savingBio, setSavingBio]   = useState(false)
 
   // If no username param, redirect to own profile
   useEffect(() => {
@@ -183,26 +184,26 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
-        </motion.div>
 
-        {/* Share profile link */}
-        {isOwnProfile && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold text-white">Your public profile</p>
-              <p className="text-xs text-zinc-500 font-mono">modlog.vercel.app/profile/{profile?.username}</p>
-            </div>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(`https://modlog.vercel.app/profile/${profile?.username}`)
-                alert('Link copied!')
-              }}
-              className="text-xs bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded-lg transition-colors"
-            >
-              📋 Copy
-            </button>
+          {/* Follow button + share */}
+          <div className="mt-4 pt-4 border-t border-zinc-800 flex items-center justify-between">
+            <FollowButton
+              targetUserId={profile?.id}
+              currentUserId={user?.id}
+            />
+            {isOwnProfile && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`https://modlog.vercel.app/profile/${profile?.username}`)
+                  alert('Link copied!')
+                }}
+                className="text-xs bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                📋 Copy Profile Link
+              </button>
+            )}
           </div>
-        )}
+        </motion.div>
 
         {/* Public builds */}
         <div>

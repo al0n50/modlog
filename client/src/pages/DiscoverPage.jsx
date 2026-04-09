@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useAuthStore } from '../store/useAuthStore'
 import { useGarageStore } from '../store/useGarageStore'
 import ModCategoryBadge from '../components/mods/ModCategoryBadge'
+import ReactionBar from '../components/ui/ReactionBar'
 import { VehicleCardSkeleton } from '../components/ui/Skeleton'
 
 export default function DiscoverPage() {
+  const { user } = useAuthStore()
   const { fetchPublicVehicles } = useGarageStore()
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading]   = useState(true)
@@ -71,7 +74,7 @@ export default function DiscoverPage() {
         )}
 
         {vehicles.map((car, i) => {
-          const cost = buildCost(car.mods)
+          const cost     = buildCost(car.mods)
           const username = car.profiles?.username
 
           return (
@@ -117,9 +120,9 @@ export default function DiscoverPage() {
                 </div>
               </div>
 
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 space-y-3">
                 {/* Stats */}
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3">
                   <span className="text-xs text-zinc-500">
                     <span className="text-white font-semibold">{car.mods?.length ?? 0}</span> mods
                   </span>
@@ -138,7 +141,7 @@ export default function DiscoverPage() {
                   </div>
                 </div>
 
-                {/* Top mods preview */}
+                {/* Top mod categories */}
                 {car.mods?.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {car.mods.slice(0, 4).map(mod => (
@@ -151,6 +154,11 @@ export default function DiscoverPage() {
                     )}
                   </div>
                 )}
+
+                {/* Reactions */}
+                <div className="pt-2 border-t border-zinc-800">
+                  <ReactionBar vehicleId={car.id} userId={user?.id} />
+                </div>
               </div>
             </motion.div>
           )
