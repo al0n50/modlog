@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 
 export default function AuthPage() {
@@ -12,6 +12,8 @@ export default function AuthPage() {
 
   const { signIn, signUp } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = location.state?.from || '/'
 
   const handleSubmit = async () => {
     setError('')
@@ -23,7 +25,7 @@ export default function AuthPage() {
         if (!username.trim()) { setError('Username is required'); setLoading(false); return }
         await signUp(email, password, username)
       }
-      navigate('/')
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {

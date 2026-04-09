@@ -22,15 +22,16 @@ export default function VehicleDetailPage() {
     addMod, deleteMod,
     addWishItem, deleteWishItem, promoteWishItem,
     updateCoverImage,
+    togglePublic,
   } = useGarageStore()
 
-  const [section, setSection]         = useState('Overview')
-  const [specs, setSpecs]             = useState(null)
-  const [specsLoading, setSpecsLoading] = useState(false)
-  const [promoteItem, setPromoteItem] = useState(null)
-  const [editingImage, setEditingImage] = useState(false)
-  const [newImageUrl, setNewImageUrl] = useState('')
-  const [savingImage, setSavingImage] = useState(false)
+  const [section, setSection]             = useState('Overview')
+  const [specs, setSpecs]                 = useState(null)
+  const [specsLoading, setSpecsLoading]   = useState(false)
+  const [promoteItem, setPromoteItem]     = useState(null)
+  const [editingImage, setEditingImage]   = useState(false)
+  const [newImageUrl, setNewImageUrl]     = useState('')
+  const [savingImage, setSavingImage]     = useState(false)
 
   useEffect(() => {
     if (id) fetchVehicleById(id)
@@ -44,7 +45,7 @@ export default function VehicleDetailPage() {
       try {
         const data = await decodeVIN(activeVehicle.vin)
         setSpecs(data.specs)
-      } catch { /* no VIN or decode failed — specs stay null */ }
+      } catch { /* no VIN or decode failed */ }
       finally { setSpecsLoading(false) }
     }
     fetch()
@@ -61,14 +62,12 @@ export default function VehicleDetailPage() {
     finally { setSavingImage(false) }
   }
 
-  // Group mods by category
-  const groupedMods = (mods) => {
-    return (mods || []).reduce((acc, mod) => {
+  const groupedMods = (mods) =>
+    (mods || []).reduce((acc, mod) => {
       const cat = mod.category || 'Other'
       acc[cat]  = acc[cat] ? [...acc[cat], mod] : [mod]
       return acc
     }, {})
-  }
 
   const buildCost = (mods) => {
     const total = (mods || []).reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0)
@@ -81,14 +80,14 @@ export default function VehicleDetailPage() {
   }
 
   if (loading || !activeVehicle) return (
-  <div className="min-h-screen bg-zinc-950 text-white pb-12">
-    <div className="w-full h-64 bg-zinc-900 animate-pulse" />
-    <div className="max-w-2xl mx-auto px-4 mt-4 space-y-3">
-      <div className="h-8 w-2/3 bg-zinc-800 rounded-lg animate-pulse" />
-      <div className="h-4 w-1/3 bg-zinc-800 rounded-lg animate-pulse" />
+    <div className="min-h-screen bg-zinc-950 text-white pb-12">
+      <div className="w-full h-64 bg-zinc-900 animate-pulse" />
+      <div className="max-w-2xl mx-auto px-4 mt-4 space-y-3">
+        <div className="h-8 w-2/3 bg-zinc-800 rounded-lg animate-pulse" />
+        <div className="h-4 w-1/3 bg-zinc-800 rounded-lg animate-pulse" />
+      </div>
     </div>
-  </div>
-)
+  )
 
   const car     = activeVehicle
   const grouped = groupedMods(car.mods)
@@ -106,7 +105,6 @@ export default function VehicleDetailPage() {
           className="w-full h-full object-cover"
           onError={e => e.target.src = 'https://placehold.co/800x400/1a1a1a/orange?text=No+Image'}
         />
-        {/* Dark gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
 
         {/* Back button */}
@@ -117,13 +115,25 @@ export default function VehicleDetailPage() {
           ← Garage
         </button>
 
-        {/* Edit image button */}
-        <button
-          onClick={() => setEditingImage(p => !p)}
-          className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm transition-colors backdrop-blur-sm"
-        >
-          📷 Edit Photo
-        </button>
+        {/* Top right buttons */}
+        <div className="absolute top-4 right-4 flex gap-2">
+          <button
+            onClick={() => togglePublic(car.id, car.is_public)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm ${
+              car.is_public
+                ? 'bg-green-600/90 hover:bg-green-700 text-white'
+                : 'bg-black/60 hover:bg-black/80 text-white'
+            }`}
+          >
+            {car.is_public ? '🌎 Public' : '🔒 Private'}
+          </button>
+          <button
+            onClick={() => setEditingImage(p => !p)}
+            className="bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm transition-colors backdrop-blur-sm"
+          >
+            📷 Edit Photo
+          </button>
+        </div>
       </div>
 
       {/* Edit image input */}
@@ -147,9 +157,7 @@ export default function VehicleDetailPage() {
             <button
               onClick={() => setEditingImage(false)}
               className="bg-zinc-700 hover:bg-zinc-600 text-white px-3 rounded-lg text-sm transition-colors"
-            >
-              ✕
-            </button>
+            >✕</button>
           </div>
         </div>
       )}
@@ -166,6 +174,17 @@ export default function VehicleDetailPage() {
           <div className="flex flex-col items-end gap-1 shrink-0">
             {cost   && <span className="text-sm font-mono text-orange-400 bg-zinc-800 px-2 py-1 rounded-lg">💰 {cost}</span>}
             {budget && <span className="text-xs font-mono text-zinc-400 bg-zinc-800 px-2 py-1 rounded-lg">🛒 {budget} planned</span>}
+            {car.is_public && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`https://modlog.vercel.app/vehicle/${car.id}`)
+                  alert('Build link copied!')
+                }}
+                className="text-xs bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                🔗 Share
+              </button>
+            )}
           </div>
         </div>
 
@@ -175,7 +194,9 @@ export default function VehicleDetailPage() {
             <button
               key={s}
               onClick={() => setSection(s)}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${section === s ? 'bg-orange-500 text-white' : 'text-zinc-400 hover:text-white'}`}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                section === s ? 'bg-orange-500 text-white' : 'text-zinc-400 hover:text-white'
+              }`}
             >
               {s}
             </button>
@@ -221,9 +242,9 @@ export default function VehicleDetailPage() {
             {/* Quick stats */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Mods Installed', value: car.mods?.length ?? 0, color: 'text-green-400' },
+                { label: 'Mods Installed', value: car.mods?.length ?? 0,          color: 'text-green-400'  },
                 { label: 'On Wishlist',    value: car.wishlist_items?.length ?? 0, color: 'text-orange-400' },
-                { label: 'Categories',     value: Object.keys(grouped).length, color: 'text-blue-400' },
+                { label: 'Categories',     value: Object.keys(grouped).length,     color: 'text-blue-400'   },
               ].map(({ label, value, color }) => (
                 <div key={label} className="bg-zinc-900 rounded-xl p-3 text-center">
                   <p className={`text-2xl font-bold ${color}`}>{value}</p>
@@ -231,6 +252,8 @@ export default function VehicleDetailPage() {
                 </div>
               ))}
             </div>
+
+            {/* AI Advisor */}
             <AIAdvisor vehicle={car} />
           </div>
         )}

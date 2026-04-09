@@ -60,6 +60,56 @@ export const useGarageStore = create((set) => ({
     set(s => ({ vehicles: s.vehicles.filter(v => v.id !== vehicleId) }))
   },
 
+  // ── Public feed ──────────────────────────────────────────
+  fetchPublicVehicles: async () => {
+    const { data, error } = await supabase
+      .from('vehicles')
+      .select('*, mods(*), wishlist_items(*), profiles(username, display_name, avatar_url)')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (error) throw error
+    return data
+  },
+
+  fetchPublicVehiclesByUser: async (username) => {
+    const { data: profile, error: profErr } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, bio')
+      .eq('username', username)
+      .single()
+
+    if (profErr) throw new Error('User not found')
+
+    const { data: vehicles, error: vehErr } = await supabase
+      .from('vehicles')
+      .select('*, mods(*), wishlist_items(*)')
+      .eq('user_id', profile.id)
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+
+    if (vehErr) throw vehErr
+    return { profile, vehicles }
+  },
+
+  togglePublic: async (vehicleId, currentValue) => {
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ is_public: !currentValue })
+      .eq('id', vehicleId)
+
+    if (error) throw error
+
+    const update = (v) => v.id === vehicleId ? { ...v, is_public: !currentValue } : v
+    set(s => ({
+      vehicles:      s.vehicles.map(update),
+      activeVehicle: s.activeVehicle?.id === vehicleId
+        ? { ...s.activeVehicle, is_public: !currentValue }
+        : s.activeVehicle,
+    }))
+  },
+
   updateCoverImage: async (vehicleId, imageUrl) => {
     const { error } = await supabase
       .from('vehicles')

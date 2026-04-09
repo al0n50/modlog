@@ -13,14 +13,18 @@ const NAV_ROUTES = ['/', '/discover', '/search', '/profile']
 
 function ProtectedRoute({ children }) {
   const { user } = useAuthStore()
-  if (!user) return <Navigate to="/auth" replace />
+  const { pathname } = useLocation()
+  if (!user) return <Navigate to="/auth" state={{ from: pathname }} replace />
   return children
 }
 
 export default function App() {
   const { initialize } = useAuthStore()
   const { pathname }   = useLocation()
-  const showNav        = NAV_ROUTES.includes(pathname)
+
+  // Show bottom nav on main tabs only
+  const showNav = NAV_ROUTES.includes(pathname) ||
+                  pathname.startsWith('/profile')
 
   useEffect(() => { initialize() }, [])
 
@@ -43,10 +47,12 @@ export default function App() {
         <Route path="/profile" element={
           <ProtectedRoute><ProfilePage /></ProtectedRoute>
         } />
+        <Route path="/profile/:username" element={
+          <ProtectedRoute><ProfilePage /></ProtectedRoute>
+        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* Only show bottom nav on main tabs, not on auth or detail pages */}
       {showNav && <BottomNav />}
     </>
   )
