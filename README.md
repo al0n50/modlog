@@ -90,12 +90,20 @@ modlog/
 ```bash
 cd client
 npm install
-# create .env with:
-# VITE_SUPABASE_URL=...
-# VITE_SUPABASE_ANON_KEY=...
-# VITE_GEMINI_API_KEY=...
-npm run dev
+cp .env.example .env.local   # fill in Supabase + Gemini keys
+npx vercel dev               # runs Vite + the /api functions together
+# (plain `npm run dev` works too, but the AI Advisor needs /api)
 ```
+
+### Deploying (Vercel)
+
+1. Import `al0n50/modlog` in Vercel and set **Root Directory** to `client` (framework: Vite).
+2. Add environment variables:
+   - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — public, bundled into the browser
+   - `GEMINI_API_KEY` — server-only, used by `api/recommendations.js`
+3. Deploy, then add the Vercel URL to Supabase → Authentication → URL Configuration (Site URL + Redirect URLs).
+
+The Gemini key never reaches the browser: the AI Advisor calls `/api/recommendations`, a serverless function that verifies the user's Supabase session before calling Gemini.
 
 ### Mobile App
 
