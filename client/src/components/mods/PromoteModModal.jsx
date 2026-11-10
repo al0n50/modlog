@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CATEGORIES } from './ModCategoryBadge'
+import { CATEGORIES } from '../../lib/categories'
 
 export default function PromoteModModal({ item, onConfirm, onClose }) {
   const [form, setForm] = useState({

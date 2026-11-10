@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CATEGORIES } from './ModCategoryBadge'
+import { CATEGORIES } from '../../lib/categories'
 
 const EMPTY = {
   name: '', category: 'Other', brand: '', price: '', install_date: '', notes: ''

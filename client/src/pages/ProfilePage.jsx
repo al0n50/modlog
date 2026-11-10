@@ -34,7 +34,7 @@ export default function ProfilePage() {
       }
       load()
     }
-  }, [username, user])
+  }, [username, user, navigate])
 
   useEffect(() => {
     if (!username) return
@@ -50,7 +50,7 @@ export default function ProfilePage() {
       finally { setLoading(false) }
     }
     load()
-  }, [username])
+  }, [username, fetchPublicVehiclesByUser])
 
   const isOwnProfile = user && profile && user.id === profile.id
 

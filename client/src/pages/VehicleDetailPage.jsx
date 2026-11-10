@@ -36,21 +36,25 @@ export default function VehicleDetailPage() {
 
   useEffect(() => {
     if (id) fetchVehicleById(id)
-  }, [id])
+  }, [id, fetchVehicleById])
 
-  // Auto-fetch specs if vehicle has a VIN
+  // Auto-fetch specs whenever the vehicle's VIN changes (reset so we never show another car's specs)
+  const vin = activeVehicle?.vin
   useEffect(() => {
-    if (!activeVehicle?.vin || specs) return
-    const fetch = async () => {
+    setSpecs(null)
+    if (!vin) return
+    let cancelled = false
+    const load = async () => {
       setSpecsLoading(true)
       try {
-        const data = await decodeVIN(activeVehicle.vin)
-        setSpecs(data.specs)
-      } catch { /* no VIN or decode failed */ }
-      finally { setSpecsLoading(false) }
+        const data = await decodeVIN(vin)
+        if (!cancelled) setSpecs(data.specs)
+      } catch { /* decode failed — specs stay empty */ }
+      finally { if (!cancelled) setSpecsLoading(false) }
     }
-    fetch()
-  }, [activeVehicle])
+    load()
+    return () => { cancelled = true }
+  }, [vin])
 
   const handleSaveImage = async () => {
     if (!newImageUrl.trim()) return

@@ -1,4 +1,3 @@
-/* global process */
 // Vercel serverless function: POST /api/recommendations
 // Keeps the Gemini API key on the server and only answers signed-in ModLog users.
 import { createClient } from '@supabase/supabase-js'

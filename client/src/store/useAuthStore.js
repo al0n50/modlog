@@ -1,12 +1,17 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 
+let initialized = false
+
 export const useAuthStore = create((set) => ({
   user: null,
   session: null,
   loading: true,
 
   initialize: async () => {
+    // Guard against double-subscribing (React StrictMode runs effects twice in dev)
+    if (initialized) return
+    initialized = true
     const { data: { session } } = await supabase.auth.getSession()
     set({ session, user: session?.user ?? null, loading: false })
     supabase.auth.onAuthStateChange((_e, session) => {

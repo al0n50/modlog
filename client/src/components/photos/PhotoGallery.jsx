@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { uploadVehiclePhoto, deleteVehiclePhoto, listVehiclePhotos } from '../../lib/storage'
 import { useGarageStore } from '../../store/useGarageStore'
@@ -12,18 +12,18 @@ export default function PhotoGallery({ vehicle, userId }) {
   const [error, setError]           = useState('')
   const fileRef                     = useRef(null)
 
-  useEffect(() => {
-    loadPhotos()
-  }, [vehicle.id])
-
-  const loadPhotos = async () => {
+  const loadPhotos = useCallback(async () => {
     setLoading(true)
     try {
       const data = await listVehiclePhotos(userId, vehicle.id)
       setPhotos(data)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
-  }
+  }, [userId, vehicle.id])
+
+  useEffect(() => {
+    loadPhotos()
+  }, [loadPhotos])
 
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files)

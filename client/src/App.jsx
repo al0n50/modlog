@@ -26,7 +26,7 @@ export default function App() {
   const showNav = NAV_ROUTES.includes(pathname) ||
                   pathname.startsWith('/profile')
 
-  useEffect(() => { initialize() }, [])
+  useEffect(() => { initialize() }, [initialize])
 
   return (
     <>

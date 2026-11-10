@@ -23,7 +23,12 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['error', { varsIgnorePattern: '^(?:[A-Z_]|motion$)' }],
     },
+  },
+  {
+    // Serverless functions and tests run in Node
+    files: ['api/**/*.js', 'tests/**/*.js', 'vite.config.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 ])

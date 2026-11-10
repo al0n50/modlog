@@ -1,17 +1,3 @@
-export const CATEGORIES = [
-  'Engine',
-  'Suspension',
-  'Exterior',
-  'Interior',
-  'Wheels & Tires',
-  'Audio',
-  'Lighting',
-  'Brakes',
-  'Exhaust',
-  'Transmission',
-  'Other',
-]
-
 const COLORS = {
   'Engine':          'bg-red-900/60 text-red-300 border-red-700',
   'Suspension':      'bg-blue-900/60 text-blue-300 border-blue-700',

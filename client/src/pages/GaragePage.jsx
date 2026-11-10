@@ -21,7 +21,7 @@ export default function GaragePage() {
 
   useEffect(() => {
     if (user) fetchVehicles(user.id)
-  }, [user])
+  }, [user, fetchVehicles])
 
   // PWA install prompt
   useEffect(() => {

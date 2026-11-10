@@ -95,6 +95,17 @@ npx vercel dev               # runs Vite + the /api functions together
 # (plain `npm run dev` works too, but the AI Advisor needs /api)
 ```
 
+### Testing
+
+```bash
+cd client
+npm test        # Vitest: NHTSA decoding, AI Advisor API + client, social helpers
+npm run lint    # ESLint (React hooks rules)
+npm run build   # production build
+```
+
+All three run in GitHub Actions on every push and pull request.
+
 ### Deploying (Vercel)
 
 1. Import `al0n50/modlog` in Vercel and set **Root Directory** to `client` (framework: Vite).

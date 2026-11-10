@@ -23,7 +23,7 @@ export default function DiscoverPage() {
       finally { setLoading(false) }
     }
     load()
-  }, [])
+  }, [fetchPublicVehicles])
 
   const buildCost = (mods) => {
     const total = mods?.reduce((s, m) => s + (parseFloat(m.price) || 0), 0) ?? 0
