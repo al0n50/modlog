@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { VEHICLE_SELECT, normalizeVehicle, plannedModRow, toWishItem } from '../lib/vehicles'
 
 // Helper: silently log a build timeline event
 async function logEvent(vehicleId, type, description, metadata = {}) {
@@ -22,36 +23,37 @@ export const useGarageStore = create((set) => ({
     set({ loading: true, error: null })
     const { data, error } = await supabase
       .from('vehicles')
-      .select('*, mods(*), wishlist_items(*)')
+      .select(VEHICLE_SELECT)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) { set({ error: error.message, loading: false }); return }
-    set({ vehicles: data, loading: false })
+    set({ vehicles: (data || []).map(normalizeVehicle), loading: false })
   },
 
   fetchVehicleById: async (vehicleId) => {
     set({ loading: true, error: null })
     const { data, error } = await supabase
       .from('vehicles')
-      .select('*, mods(*), wishlist_items(*)')
+      .select(VEHICLE_SELECT)
       .eq('id', vehicleId)
       .single()
 
     if (error) { set({ error: error.message, loading: false }); return }
-    set({ activeVehicle: data, loading: false })
+    set({ activeVehicle: normalizeVehicle(data), loading: false })
   },
 
   addVehicle: async (vehicleData, userId) => {
     const { data, error } = await supabase
       .from('vehicles')
       .insert({ ...vehicleData, user_id: userId })
-      .select('*, mods(*), wishlist_items(*)')
+      .select(VEHICLE_SELECT)
       .single()
 
     if (error) throw error
-    set(s => ({ vehicles: [data, ...s.vehicles] }))
-    return data
+    const vehicle = normalizeVehicle(data)
+    set(s => ({ vehicles: [vehicle, ...s.vehicles] }))
+    return vehicle
   },
 
   deleteVehicle: async (vehicleId) => {
@@ -64,13 +66,13 @@ export const useGarageStore = create((set) => ({
   fetchPublicVehicles: async () => {
     const { data, error } = await supabase
       .from('vehicles')
-      .select('*, mods(*), wishlist_items(*), profiles(username, display_name, avatar_url)')
+      .select(`${VEHICLE_SELECT}, profiles(username, display_name, avatar_url)`)
       .eq('is_public', true)
       .order('created_at', { ascending: false })
       .limit(50)
 
     if (error) throw error
-    return data
+    return (data || []).map(normalizeVehicle)
   },
 
   fetchPublicVehiclesByUser: async (username) => {
@@ -84,13 +86,13 @@ export const useGarageStore = create((set) => ({
 
     const { data: vehicles, error: vehErr } = await supabase
       .from('vehicles')
-      .select('*, mods(*), wishlist_items(*)')
+      .select(VEHICLE_SELECT)
       .eq('user_id', profile.id)
       .eq('is_public', true)
       .order('created_at', { ascending: false })
 
     if (vehErr) throw vehErr
-    return { profile, vehicles }
+    return { profile, vehicles: (vehicles || []).map(normalizeVehicle) }
   },
 
   togglePublic: async (vehicleId, currentValue) => {
@@ -131,7 +133,7 @@ export const useGarageStore = create((set) => ({
   addMod: async (vehicleId, modData) => {
     const { data, error } = await supabase
       .from('mods')
-      .insert({ ...modData, vehicle_id: vehicleId })
+      .insert({ ...modData, vehicle_id: vehicleId, status: 'done' })
       .select()
       .single()
 
@@ -169,13 +171,14 @@ export const useGarageStore = create((set) => ({
 
   // ── Wishlist ──────────────────────────────────────────────
   addWishItem: async (vehicleId, itemData) => {
-    const { data, error } = await supabase
-      .from('wishlist_items')
-      .insert({ ...itemData, vehicle_id: vehicleId })
+    const { data: row, error } = await supabase
+      .from('mods')
+      .insert(plannedModRow(vehicleId, itemData))
       .select()
       .single()
 
     if (error) throw error
+    const data = toWishItem(row)
 
     const update = (v) => v.id === vehicleId ? { ...v, wishlist_items: [...v.wishlist_items, data] } : v
     set(s => ({
@@ -187,7 +190,7 @@ export const useGarageStore = create((set) => ({
   },
 
   deleteWishItem: async (vehicleId, itemId) => {
-    const { error } = await supabase.from('wishlist_items').delete().eq('id', itemId)
+    const { error } = await supabase.from('mods').delete().eq('id', itemId).eq('status', 'planned')
     if (error) throw error
 
     const update = (v) => v.id === vehicleId
@@ -202,10 +205,11 @@ export const useGarageStore = create((set) => ({
   },
 
   promoteWishItem: async (vehicleId, wishItem, modData) => {
+    // A planned mod becomes a done mod: same row, new status and install details
     const { data: mod, error: modErr } = await supabase
       .from('mods')
-      .insert({
-        vehicle_id:   vehicleId,
+      .update({
+        status:       'done',
         name:         modData.name,
         category:     modData.category,
         brand:        modData.brand        || null,
@@ -213,14 +217,11 @@ export const useGarageStore = create((set) => ({
         install_date: modData.install_date || null,
         notes:        modData.notes        || null,
       })
+      .eq('id', wishItem.id)
       .select()
       .single()
 
     if (modErr) throw modErr
-
-    const { error: delErr } = await supabase
-      .from('wishlist_items').delete().eq('id', wishItem.id)
-    if (delErr) throw delErr
 
     await logEvent(vehicleId, 'wishlist_promoted',
       `Installed from wishlist: ${mod.name}`,

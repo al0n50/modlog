@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { decodeVIN } from '../../lib/nhtsa'
+import { vehicleRow, vinError as checkVin } from '../../lib/vehicles'
 
 // mode: null | 'vin' | 'manual'
 export default function AddVehicleModal({ onSave, onClose }) {
@@ -47,15 +48,21 @@ export default function AddVehicleModal({ onSave, onClose }) {
       setVinError('Year, Make, and Model are required.')
       return
     }
+    const badVin = checkVin(form.vin)
+    if (badVin) {
+      setVinError(badVin)
+      return
+    }
+    const year = parseInt(form.year, 10)
+    if (!year || year < 1886 || year > new Date().getFullYear() + 2) {
+      setVinError('Enter a valid model year.')
+      return
+    }
     setSaving(true)
     try {
       await onSave({
-        vin:         form.vin || null,
-        year:        parseInt(form.year),
-        make:        form.make.trim(),
-        model:       form.model.trim(),
-        trim:        form.trim.trim(),
-        cover_image: form.cover_image.trim() ||
+        ...vehicleRow(form),
+        cover_image: (form.cover_image || '').trim() ||
           `https://placehold.co/600x400/1a1a1a/orange?text=${encodeURIComponent(form.make + ' ' + form.model)}`,
       })
       onClose()
