@@ -5,9 +5,11 @@ is a new SQL file in `migrations/`, applied in filename order.
 
 | Migration | What it does |
 |---|---|
-| `20260407000000_baseline.sql` | The schema as originally built by hand (8 tables, security rules, sign-up trigger, photo bucket). Idempotent, so it was registered against the existing production database. |
-| `20261117170000_v1_data_model.sql` | v1 data model: exact car identity (`body_class`, `specs`), one `mods` table with `status` = `done` or `planned`, data rules (year, VIN format, price, categories, reactions), `updated_at`, and indexes on every link between tables. |
-| `20261117170100_security_hardening.sql` | Locks down the sign-up function, replaces broad rules with explicit per-action rules, limits photo uploads to images up to 5 MB, and adds `ai_requests` for rate-limiting the AI Advisor. |
+| `20261117180830_baseline.sql` | The schema as originally built by hand (8 tables, security rules, sign-up trigger, photo bucket). Idempotent, so it was registered against the existing production database. |
+| `20261117180901_v1_data_model.sql` | v1 data model: exact car identity (`body_class`, `specs`), one `mods` table with `status` = `done` or `planned`, data rules (year, VIN format, price, categories, reactions), `updated_at`, and indexes on every link between tables. |
+| `20261117180946_security_hardening.sql` | Locks down the sign-up function, replaces broad rules with explicit per-action rules, limits photo uploads to images up to 5 MB, and adds `ai_requests` for rate-limiting the AI Advisor. |
+
+Filenames match the versions recorded in production's migration history, so the repo and the live database stay in sync.
 
 ## Data model (v1)
 
