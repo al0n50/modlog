@@ -96,3 +96,15 @@ describe('formatMake', () => {
     expect(formatMake(null)).toBe('')
   })
 })
+
+describe('coverImage', () => {
+  it('uses the cover photo when it is a web link', async () => {
+    const { coverImage } = await import('../src/lib/vehicles')
+    expect(coverImage({ cover_image: 'https://cdn.example.com/a.jpg' })).toBe('https://cdn.example.com/a.jpg')
+  })
+  it('falls back to a placeholder with the car name', async () => {
+    const { coverImage } = await import('../src/lib/vehicles')
+    expect(coverImage({ make: 'Toyota', model: 'GR86', cover_image: null })).toMatch(/text=Toyota%20GR86$/)
+    expect(coverImage({ make: 'X', model: 'Y', cover_image: 'javascript:alert(1)' })).toMatch(/^https:\/\/placehold\.co\//)
+  })
+})

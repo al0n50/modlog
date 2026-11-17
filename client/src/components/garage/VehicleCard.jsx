@@ -5,6 +5,7 @@ import ModCategoryBadge from '../mods/ModCategoryBadge'
 import AddModForm from '../mods/AddModForm'
 import AddWishForm from '../mods/AddWishForm'
 import PromoteModModal from '../mods/PromoteModModal'
+import { coverImage } from '../../lib/vehicles'
 
 export default function VehicleCard({ car, onDelete, onAddMod, onDeleteMod, onAddWish, onDeleteWish, onPromote, index = 0 }) {
   const [activeTab, setActiveTab]     = useState('installed')
@@ -45,7 +46,7 @@ export default function VehicleCard({ car, onDelete, onAddMod, onDeleteMod, onAd
         <div className="relative">
           <Link to={`/vehicle/${car.id}`}>
             <img
-              src={car.cover_image}
+              src={coverImage(car)}
               alt={car.model}
               className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
               onError={e => e.target.src = 'https://placehold.co/600x400/1a1a1a/orange?text=No+Image'}

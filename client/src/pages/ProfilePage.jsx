@@ -6,6 +6,7 @@ import { useGarageStore } from '../store/useGarageStore'
 import { getUsername, updateBio } from '../lib/db'
 import ModCategoryBadge from '../components/mods/ModCategoryBadge'
 import FollowButton from '../components/ui/FollowButton'
+import { coverImage } from '../lib/vehicles'
 
 export default function ProfilePage() {
   const { username } = useParams()
@@ -233,7 +234,7 @@ export default function ProfilePage() {
                   <Link to={`/vehicle/${car.id}`}>
                     <div className="relative">
                       <img
-                        src={car.cover_image}
+                        src={coverImage(car)}
                         alt={car.model}
                         className="w-full h-40 object-cover hover:opacity-90 transition-opacity"
                         onError={e => e.target.src = 'https://placehold.co/600x400/1a1a1a/orange?text=No+Image'}

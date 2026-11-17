@@ -10,6 +10,7 @@ is a new SQL file in `migrations/`, applied in filename order.
 | `20261117180946_security_hardening.sql` | Locks down the sign-up function, replaces broad rules with explicit per-action rules, limits photo uploads to images up to 5 MB, and adds `ai_requests` for rate-limiting the AI Advisor. |
 | `20261117183824_private_photo_listing.sql` | Photos follow their car's privacy: only the owner can list a private car's photos (before, anyone could list the whole bucket). |
 | `20261117205936_build_data_layer.sql` | Phase 4: the database writes the build timeline (clients can't fake history), `vehicle_summaries` for feeds, paint `color` and `body_style` on cars, and the 3D model catalog (`car_models`, `car_model_for()`, `car-models` bucket) for Option B. |
+| `20261117212011_input_limits.sql` | Length limits on names, notes and links; product/cover links must be http(s); no future install dates; public builds' timelines are visible to visitors. Found by stress-testing the live API. |
 
 Filenames match the versions recorded in production's migration history, so the repo and the live database stay in sync.
 

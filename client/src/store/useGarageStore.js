@@ -22,7 +22,7 @@ export const useGarageStore = create((set, get) => ({
   },
 
   fetchVehicleById: async (vehicleId) => {
-    set({ loading: true, error: null })
+    set({ loading: true, error: null, activeVehicle: null })
     try {
       set({ activeVehicle: await db.getVehicle(vehicleId), loading: false })
     } catch (e) { set({ error: e.message, loading: false }) }

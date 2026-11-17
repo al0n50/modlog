@@ -16,6 +16,12 @@ const CONSTRAINT_MESSAGES = {
   mods_status_valid:       'A mod is either done or planned.',
   follows_not_self:        'You can\'t follow yourself.',
   reactions_type_valid:    'That reaction isn\'t supported.',
+  vehicles_text_lengths:   'Make, model and trim must be 60 characters or fewer.',
+  vehicles_cover_url:      'The image link must start with https://.',
+  mods_text_lengths:       'Keep names under 120 characters, brand and part number under 80, and notes under 2,000.',
+  mods_url_http:           'The product link must start with https:// (or http://).',
+  mods_install_date_range: 'Install date can\'t be in the future.',
+  profiles_text_lengths:   'Keep your bio under 500 characters.',
 }
 
 export class DataError extends Error {
@@ -40,6 +46,10 @@ export function friendlyMessage(err) {
     return name ? CONSTRAINT_MESSAGES[name] : 'Some details aren\'t valid. Check the form and try again.'
   }
   if (code === '23505') return 'That already exists.'
+  if (code === '23502') return 'Fill in the required fields.'
+  if (code === '22P02') return 'Not found. The link may be broken.'
+  if (code === '22003') return 'That number is too large.'
+  if (code === '22007' || code === '22008') return 'Enter a valid date.'
   if (code === '23503') return 'That item no longer exists. Refresh and try again.'
   if (code === 'PGRST116') return 'Not found. It may be private or deleted.'
   if (code === 'PGRST301' || code === 'PGRST303' || /JWT expired/i.test(text)) return 'Your session expired. Sign in again.'

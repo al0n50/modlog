@@ -1,1 +1,6 @@
 @import "tailwindcss";
+/* Long unbroken text (part numbers, URLs, a very long mod name) wraps instead of
+   stretching the page sideways. */
+body {
+  overflow-wrap: anywhere;
+}

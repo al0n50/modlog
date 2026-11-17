@@ -6,6 +6,7 @@ import { useGarageStore } from '../store/useGarageStore'
 import ModCategoryBadge from '../components/mods/ModCategoryBadge'
 import ReactionBar from '../components/ui/ReactionBar'
 import { VehicleCardSkeleton } from '../components/ui/Skeleton'
+import { coverImage } from '../lib/vehicles'
 
 export default function DiscoverPage() {
   const { user } = useAuthStore()
@@ -106,7 +107,7 @@ export default function DiscoverPage() {
               <div className="relative">
                 <Link to={`/vehicle/${car.id}`}>
                   <img
-                    src={car.cover_image}
+                    src={coverImage(car)}
                     alt={car.model}
                     className="w-full h-48 object-cover hover:opacity-90 transition-opacity cursor-pointer"
                     onError={e => e.target.src = 'https://placehold.co/600x400/1a1a1a/orange?text=No+Image'}

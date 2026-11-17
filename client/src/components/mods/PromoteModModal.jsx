@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CATEGORIES } from '../../lib/categories'
 
 export default function PromoteModModal({ item, onConfirm, onClose }) {
@@ -11,11 +11,15 @@ export default function PromoteModModal({ item, onConfirm, onClose }) {
     notes:        '',
   })
   const [saving, setSaving] = useState(false)
+  // Ignore repeat clicks while a save is in flight (state updates land too late to stop them)
+  const busy = useRef(false)
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   const handleConfirm = async () => {
     if (!form.name.trim()) return
+    if (busy.current) return
+    busy.current = true
     setSaving(true)
     try {
       await onConfirm({
@@ -28,7 +32,7 @@ export default function PromoteModModal({ item, onConfirm, onClose }) {
       })
       onClose()
     } catch (e) { alert(e.message) }
-    finally { setSaving(false) }
+    finally { busy.current = false; setSaving(false) }
   }
 
   return (

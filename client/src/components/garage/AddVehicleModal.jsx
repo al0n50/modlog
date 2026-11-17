@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { decodeVIN } from '../../lib/nhtsa'
 import { vehicleRow, vinError as checkVin, BODY_STYLES } from '../../lib/vehicles'
 
@@ -10,6 +10,8 @@ export default function AddVehicleModal({ onSave, onClose }) {
   const [vinError, setVinError] = useState('')
   const [vinSuccess, setVinSuccess] = useState('')
   const [saving, setSaving]   = useState(false)
+  // Ignore repeat clicks while a save is in flight (state updates land too late to stop them)
+  const busy = useRef(false)
 
   const [form, setForm] = useState({
     vin: '', year: '', make: '', model: '', trim: '', cover_image: '', color: '', body_style: ''
@@ -60,6 +62,8 @@ export default function AddVehicleModal({ onSave, onClose }) {
       setVinError('Enter a valid model year.')
       return
     }
+    if (busy.current) return
+    busy.current = true
     setSaving(true)
     try {
       await onSave({
@@ -71,7 +75,7 @@ export default function AddVehicleModal({ onSave, onClose }) {
     } catch (e) {
       setVinError(e.message)
     } finally {
-      setSaving(false)
+      busy.current = false; setSaving(false)
     }
   }
 

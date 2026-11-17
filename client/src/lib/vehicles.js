@@ -101,3 +101,11 @@ export function vehicleRow(form) {
     specs,
   }
 }
+
+// The image to show for a car: its cover photo, or a placeholder with its name
+export function coverImage(car) {
+  const url = (car?.cover_image || '').trim()
+  if (/^https?:\/\//i.test(url)) return url
+  const label = [car?.make, car?.model].filter(Boolean).join(' ').slice(0, 40) || 'No Image'
+  return `https://placehold.co/600x400/1a1a1a/orange?text=${encodeURIComponent(label)}`
+}

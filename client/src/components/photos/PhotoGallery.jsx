@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { uploadVehiclePhoto, deleteVehiclePhoto, listVehiclePhotos, PHOTO_TYPES } from '../../lib/storage'
 import { useGarageStore } from '../../store/useGarageStore'
 
-export default function PhotoGallery({ vehicle, userId }) {
+// Photos live in the car owner's folder. Visitors to a public build see them read-only.
+export default function PhotoGallery({ vehicle, canEdit = false }) {
+  const userId = vehicle.user_id
   const { updateCoverImage } = useGarageStore()
   const [photos, setPhotos]         = useState([])
   const [loading, setLoading]       = useState(true)
@@ -12,18 +14,14 @@ export default function PhotoGallery({ vehicle, userId }) {
   const [error, setError]           = useState('')
   const fileRef                     = useRef(null)
 
-  const loadPhotos = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await listVehiclePhotos(userId, vehicle.id)
-      setPhotos(data)
-    } catch (e) { setError(e.message) }
-    finally { setLoading(false) }
-  }, [userId, vehicle.id])
-
   useEffect(() => {
-    loadPhotos()
-  }, [loadPhotos])
+    let cancelled = false
+    listVehiclePhotos(userId, vehicle.id)
+      .then(data => { if (!cancelled) setPhotos(data) })
+      .catch(e => { if (!cancelled) setError(e.message) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [userId, vehicle.id])
 
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files)
@@ -65,6 +63,7 @@ export default function PhotoGallery({ vehicle, userId }) {
     <div className="space-y-4">
 
       {/* Upload button */}
+      {canEdit && (
       <div className="flex items-center gap-3">
         <motion.button
           whileTap={{ scale: 0.97 }}
@@ -95,6 +94,8 @@ export default function PhotoGallery({ vehicle, userId }) {
           onChange={handleUpload}
         />
       </div>
+      )}
+      {!canEdit && <span className="text-xs text-zinc-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>}
 
       {/* Error */}
       {error && (
@@ -117,7 +118,7 @@ export default function PhotoGallery({ vehicle, userId }) {
         <div className="text-center py-10 bg-zinc-800/40 rounded-2xl border border-dashed border-zinc-700">
           <p className="text-4xl mb-2">📷</p>
           <p className="text-zinc-400 text-sm font-medium">No photos yet</p>
-          <p className="text-zinc-600 text-xs mt-1">Upload photos of your build</p>
+          <p className="text-zinc-600 text-xs mt-1">{canEdit ? 'Upload photos of your build' : 'The owner hasn\'t added photos yet'}</p>
         </div>
       )}
 
@@ -139,7 +140,7 @@ export default function PhotoGallery({ vehicle, userId }) {
                 onClick={() => setLightbox(photo.url)}
               />
               {/* Hover overlay */}
-              <div className="absolute inset-0 rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              {canEdit && <div className="absolute inset-0 rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <button
                   onClick={() => handleSetCover(photo.url)}
                   className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-2 py-1 rounded-lg transition-colors"
@@ -150,7 +151,7 @@ export default function PhotoGallery({ vehicle, userId }) {
                   className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded-lg transition-colors"
                   title="Delete photo"
                 >🗑</button>
-              </div>
+              </div>}
             </motion.div>
           ))}
         </div>
@@ -180,7 +181,7 @@ export default function PhotoGallery({ vehicle, userId }) {
               className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg transition-colors"
             >✕</button>
             {/* Lightbox actions */}
-            <div className="absolute bottom-6 flex gap-3">
+            {canEdit && <div className="absolute bottom-6 flex gap-3">
               <button
                 onClick={() => { handleSetCover(lightbox); setLightbox(null) }}
                 className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
@@ -189,7 +190,7 @@ export default function PhotoGallery({ vehicle, userId }) {
                 onClick={() => handleDelete({ url: lightbox })}
                 className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
               >🗑 Delete</button>
-            </div>
+            </div>}
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CATEGORIES } from '../../lib/categories'
 
 const EMPTY = {
@@ -9,11 +9,15 @@ export default function AddModForm({ vehicleId, onAdd }) {
   const [form, setForm]           = useState(EMPTY)
   const [showDetails, setShowDetails] = useState(false)
   const [saving, setSaving]       = useState(false)
+  // Ignore repeat clicks while a save is in flight (state updates land too late to stop them)
+  const busy = useRef(false)
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   const handleAdd = async () => {
     if (!form.name.trim()) return
+    if (busy.current) return
+    busy.current = true
     setSaving(true)
     try {
       await onAdd(vehicleId, {
@@ -27,7 +31,7 @@ export default function AddModForm({ vehicleId, onAdd }) {
       setForm(EMPTY)
       setShowDetails(false)
     } catch (e) { alert(e.message) }
-    finally { setSaving(false) }
+    finally { busy.current = false; setSaving(false) }
   }
 
   return (

@@ -10,6 +10,7 @@ import PromoteModModal from '../components/mods/PromoteModModal'
 import BuildTimeline from '../components/timeline/BuildTimeline'
 import AIAdvisor from '../components/garage/AIAdvisor'
 import PhotoGallery from '../components/photos/PhotoGallery'
+import { coverImage } from '../lib/vehicles'
 
 const SECTIONS = ['Overview', 'Mods', 'Wishlist', 'Timeline', 'Photos']
 
@@ -18,7 +19,7 @@ export default function VehicleDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const {
-    activeVehicle, loading,
+    activeVehicle, loading, error,
     fetchVehicleById,
     addMod, deleteMod,
     addWishItem, deleteWishItem, promoteWishItem,
@@ -27,8 +28,6 @@ export default function VehicleDetailPage() {
   } = useGarageStore()
 
   const [section, setSection]             = useState('Overview')
-  const [specs, setSpecs]                 = useState(null)
-  const [specsLoading, setSpecsLoading]   = useState(false)
   const [promoteItem, setPromoteItem]     = useState(null)
   const [editingImage, setEditingImage]   = useState(false)
   const [newImageUrl, setNewImageUrl]     = useState('')
@@ -38,23 +37,22 @@ export default function VehicleDetailPage() {
     if (id) fetchVehicleById(id)
   }, [id, fetchVehicleById])
 
-  // Auto-fetch specs whenever the vehicle's VIN changes (reset so we never show another car's specs)
+  // Factory specs are saved with the car when it's added by VIN. Only older cars without
+  // saved specs ask NHTSA (keyed by VIN so another car's specs are never shown).
   const vin = activeVehicle?.vin
+  const savedSpecs = activeVehicle?.specs && Object.keys(activeVehicle.specs).length ? activeVehicle.specs : null
+  const hasSavedSpecs = !!savedSpecs
+  const [decoded, setDecoded] = useState({ vin: null, specs: null })
   useEffect(() => {
-    setSpecs(null)
-    if (!vin) return
+    if (!vin || hasSavedSpecs) return
     let cancelled = false
-    const load = async () => {
-      setSpecsLoading(true)
-      try {
-        const data = await decodeVIN(vin)
-        if (!cancelled) setSpecs(data.specs)
-      } catch { /* decode failed — specs stay empty */ }
-      finally { if (!cancelled) setSpecsLoading(false) }
-    }
-    load()
+    decodeVIN(vin)
+      .then(d => { if (!cancelled) setDecoded({ vin, specs: d.specs }) })
+      .catch(() => { if (!cancelled) setDecoded({ vin, specs: null }) })   // decode failed — no specs
     return () => { cancelled = true }
-  }, [vin])
+  }, [vin, hasSavedSpecs])
+  const specs = savedSpecs || (decoded.vin === vin ? decoded.specs : null)
+  const specsLoading = !!vin && !savedSpecs && decoded.vin !== vin
 
   const handleSaveImage = async () => {
     if (!newImageUrl.trim()) return
@@ -84,7 +82,18 @@ export default function VehicleDetailPage() {
     return total > 0 ? `$${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null
   }
 
-  if (loading || !activeVehicle) return (
+  if (!loading && error) return (
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
+      <p className="text-4xl">🚧</p>
+      <p className="text-zinc-300">{error}</p>
+      <button onClick={() => navigate('/')}
+        className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors">
+        Back to your garage
+      </button>
+    </div>
+  )
+
+  if (loading || !activeVehicle || activeVehicle.id !== id) return (
     <div className="min-h-screen bg-zinc-950 text-white pb-12">
       <div className="w-full h-64 bg-zinc-900 animate-pulse" />
       <div className="max-w-2xl mx-auto px-4 mt-4 space-y-3">
@@ -95,6 +104,8 @@ export default function VehicleDetailPage() {
   )
 
   const car     = activeVehicle
+  // Only the owner can change a build; visitors to a public build get a read-only page
+  const isOwner = !!user && user.id === car.user_id
   const grouped = groupedMods(car.mods)
   const cost    = buildCost(car.mods)
   const budget  = wishBudget(car.wishlist_items)
@@ -105,7 +116,7 @@ export default function VehicleDetailPage() {
       {/* Hero image */}
       <div className="relative w-full h-64 bg-zinc-900">
         <img
-          src={car.cover_image}
+          src={coverImage(car)}
           alt={car.model}
           className="w-full h-full object-cover"
           onError={e => e.target.src = 'https://placehold.co/800x400/1a1a1a/orange?text=No+Image'}
@@ -121,7 +132,7 @@ export default function VehicleDetailPage() {
         </button>
 
         {/* Top right buttons */}
-        <div className="absolute top-4 right-4 flex gap-2">
+        {isOwner && <div className="absolute top-4 right-4 flex gap-2">
           <button
             onClick={() => togglePublic(car.id, car.is_public)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm ${
@@ -138,11 +149,11 @@ export default function VehicleDetailPage() {
           >
             📷 Edit Photo
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Edit image input */}
-      {editingImage && (
+      {isOwner && editingImage && (
         <div className="max-w-2xl mx-auto px-4 mt-3">
           <div className="flex gap-2">
             <input
@@ -259,7 +270,7 @@ export default function VehicleDetailPage() {
             </div>
 
             {/* AI Advisor */}
-            <AIAdvisor vehicle={car} />
+            {isOwner && <AIAdvisor vehicle={car} />}
           </div>
         )}
 
@@ -287,19 +298,19 @@ export default function VehicleDetailPage() {
                         </div>
                         {mod.notes && <p className="text-xs text-zinc-600 italic">{mod.notes}</p>}
                       </div>
-                      <button
-                        onClick={() => deleteMod(car.id, mod.id, mod.name)}
+                      {isOwner && <button
+                        onClick={() => deleteMod(car.id, mod.id).catch(e => alert(e.message))}
                         className="text-zinc-700 hover:text-red-400 text-xs transition-colors shrink-0"
-                      >✕</button>
+                      >✕</button>}
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
-            <div className="bg-zinc-900 rounded-2xl p-4">
+            {isOwner && <div className="bg-zinc-900 rounded-2xl p-4">
               <h3 className="text-sm font-semibold text-zinc-400 mb-2">Add Mod</h3>
               <AddModForm vehicleId={car.id} onAdd={addMod} />
-            </div>
+            </div>}
           </div>
         )}
 
@@ -334,22 +345,22 @@ export default function VehicleDetailPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 shrink-0">
+                {isOwner && <div className="flex flex-col gap-1 shrink-0">
                   <button
                     onClick={() => setPromoteItem({ vehicleId: car.id, item })}
                     className="text-xs bg-green-700 hover:bg-green-600 text-white px-2 py-0.5 rounded transition-colors"
                   >✅ Install</button>
                   <button
-                    onClick={() => deleteWishItem(car.id, item.id)}
+                    onClick={() => deleteWishItem(car.id, item.id).catch(e => alert(e.message))}
                     className="text-zinc-600 hover:text-red-400 text-xs text-center transition-colors"
                   >✕</button>
-                </div>
+                </div>}
               </div>
             ))}
-            <div className="bg-zinc-900 rounded-2xl p-4">
+            {isOwner && <div className="bg-zinc-900 rounded-2xl p-4">
               <h3 className="text-sm font-semibold text-zinc-400 mb-2">Add to Wishlist</h3>
               <AddWishForm vehicleId={car.id} onAdd={addWishItem} />
-            </div>
+            </div>}
           </div>
         )}
 
@@ -360,16 +371,17 @@ export default function VehicleDetailPage() {
             <BuildTimeline vehicleId={car.id} />
           </div>
         )}
-      </div>
+
         {/* ── Photos ── */}
         {section === 'Photos' && (
           <div className="bg-zinc-900 rounded-2xl p-4">
             <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-4">
               Build Gallery
             </h2>
-            <PhotoGallery vehicle={car} userId={user.id} />
+            <PhotoGallery vehicle={car} canEdit={isOwner} />
           </div>
         )}
+      </div>
       {/* Promote modal */}
       {promoteItem && (
         <PromoteModModal

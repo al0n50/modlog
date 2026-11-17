@@ -35,6 +35,9 @@ describe('friendly errors', () => {
     expect(db.friendlyMessage({ code: '42501', message: 'new row violates row-level security policy' })).toMatch(/permission/)
     expect(db.friendlyMessage({ code: 'PGRST301', message: 'JWT expired' })).toMatch(/session expired/)
     expect(db.friendlyMessage(new TypeError('Failed to fetch'))).toMatch(/connection/)
+    expect(db.friendlyMessage({ code: '22P02', message: 'invalid input syntax for type uuid: "abc"' })).toMatch(/link may be broken/)
+    expect(db.friendlyMessage({ code: '23514', message: 'violates check constraint "mods_url_http"' })).toMatch(/https:\/\//)
+    expect(db.friendlyMessage({ code: '22003', message: 'numeric field overflow' })).toMatch(/too large/)
   })
   it('throws DataError with the original error kept', async () => {
     results.push({ data: null, error: { code: '23514', message: 'violates check constraint "mods_price_nonnegative"' } })
