@@ -6,7 +6,6 @@
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)
-![Expo](https://img.shields.io/badge/Expo-000020?style=flat&logo=expo&logoColor=white)
 [![CI](https://github.com/al0n50/modlog/actions/workflows/ci.yml/badge.svg)](https://github.com/al0n50/modlog/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -18,7 +17,7 @@
 
 Modlog is a full-stack social platform for car enthusiasts — think Amazon Garage meets a build diary with a community feed. Add your vehicles, track every mod from wishlist to installed, build a visual timeline, and follow other builders to see what they're working on.
 
-The app runs as a web app (React/Vite PWA), a mobile app (React Native/Expo), and a backend API (Express/MongoDB) — all in one repo.
+It's a React/Vite web app (installable as a PWA) backed by Supabase (auth, Postgres, storage) and Vercel serverless functions. The database schema, security rules, and their tests live in [`supabase/`](supabase/).
 
 ---
 
@@ -43,9 +42,9 @@ The app runs as a web app (React/Vite PWA), a mobile app (React Native/Expo), an
 - Photo gallery per vehicle
 - Visual build timeline showing modification history in order
 
-**Cross-Platform**
+**Installable**
 - PWA installable on Android/iOS from the browser
-- Dedicated React Native / Expo mobile app
+- Native mobile app planned on the same backend
 
 ---
 
@@ -60,8 +59,7 @@ The app runs as a web app (React/Vite PWA), a mobile app (React Native/Expo), an
 | Auth & Database | Supabase |
 | Vehicle Data | NHTSA API |
 | AI | Google Gemini |
-| Mobile | Expo 54 + React Native 0.81 |
-| Backend | Node.js + Express + MongoDB |
+| API | Vercel serverless functions (`client/api/`) |
 | PWA | vite-plugin-pwa |
 
 ---
@@ -80,9 +78,10 @@ modlog/
 │   │   ├── social/  # FollowButton
 │   │   ├── ai/      # AIAdvisor
 │   │   └── ui/      # BottomNav, Skeleton
-│   └── src/lib/     # supabase.js, gemini.js, nhtsa.js, storage.js
-├── mobile/          # Expo React Native app
-└── server/          # Express + MongoDB API
+│   ├── src/lib/     # supabase.js, vehicles.js, gemini.js, nhtsa.js, storage.js
+│   └── api/         # serverless functions: recommendations, health
+├── supabase/        # migrations, security-rule tests
+└── scripts/         # db-test.sh
 ```
 
 ---
@@ -120,32 +119,11 @@ All three run in GitHub Actions on every push and pull request.
 
 The Gemini key never reaches the browser: the AI Advisor calls `/api/recommendations`, a serverless function that verifies the user's Supabase session before calling Gemini.
 
-### Mobile App
-
-```bash
-cd mobile
-npm install
-npx expo start
-```
-
-Scan the QR code with Expo Go or run on simulator.
-
-### Backend
-
-```bash
-cd server
-npm install
-# create .env with:
-# MONGO_URI=mongodb://...
-# PORT=5000
-npm start
-```
-
 ---
 
 ## Status
 
-🚧 **In active development** — core garage, mod tracking, Supabase auth, and AI Advisor are functional. Social feed and mobile app in progress.
+🚧 **In active development** — core garage, mod tracking, Supabase auth, and AI Advisor are functional. Next: the 3D garage and the shared data-access layer.
 
 ---
 
