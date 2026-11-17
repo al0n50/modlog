@@ -65,13 +65,26 @@ export function vinError(vin) {
   return null
 }
 
+// NHTSA returns makes in capitals ("HONDA", "MERCEDES-BENZ"). Store them the way people
+// write them so the same make always matches (e.g. when picking a 3D model).
+// Mixed-case input is assumed intentional and left alone.
+const MAKE_ACRONYMS = new Set(['BMW', 'GMC', 'MG', 'AMC', 'SRT', 'VW', 'BYD', 'DS', 'TVR', 'KTM', 'RUF'])
+const MAKE_SPECIAL  = { MCLAREN: 'McLaren', DELOREAN: 'DeLorean' }
+export function formatMake(make) {
+  const m = (make || '').trim().replace(/\s+/g, ' ')
+  if (!m || (m !== m.toUpperCase() && m !== m.toLowerCase())) return m
+  return m.toUpperCase().split(/([ -])/).map(w =>
+    MAKE_SPECIAL[w] || (MAKE_ACRONYMS.has(w) ? w : w.charAt(0) + w.slice(1).toLowerCase())
+  ).join('')
+}
+
 // Vehicle form (UI) → vehicle row (database). Keeps the exact-car details from a VIN decode.
 export function vehicleRow(form) {
   const specs = form._specs || {}
   return {
     vin:        normalizeVin(form.vin),
     year:       parseInt(form.year, 10),
-    make:       (form.make || '').trim(),
+    make:       formatMake(form.make),
     model:      (form.model || '').trim(),
     trim:       (form.trim || '').trim() || null,
     body_class: (specs.bodyClass || '').trim() || null,

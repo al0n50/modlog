@@ -72,3 +72,21 @@ describe('vehicleRow', () => {
     expect(vehicleRow({ year: '2021', make: 'Toyota', model: 'GR86' })).toMatchObject({ vin: null, body_class: null, specs: {} })
   })
 })
+
+describe('formatMake', () => {
+  it('writes NHTSA capitals the way people do', async () => {
+    const { formatMake } = await import('../src/lib/vehicles')
+    expect(formatMake('HONDA')).toBe('Honda')
+    expect(formatMake('MERCEDES-BENZ')).toBe('Mercedes-Benz')
+    expect(formatMake('ALFA  ROMEO ')).toBe('Alfa Romeo')
+    expect(formatMake('BMW')).toBe('BMW')
+    expect(formatMake('MCLAREN')).toBe('McLaren')
+    expect(formatMake('chevrolet')).toBe('Chevrolet')
+  })
+  it('leaves mixed case and empty input alone', async () => {
+    const { formatMake } = await import('../src/lib/vehicles')
+    expect(formatMake('McLaren')).toBe('McLaren')
+    expect(formatMake('')).toBe('')
+    expect(formatMake(null)).toBe('')
+  })
+})

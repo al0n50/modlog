@@ -1,3 +1,5 @@
+import { formatMake, normalizeVin, vinError } from './vehicles'
+
 const BASE = 'https://vpic.nhtsa.dot.gov/api/vehicles'
 
 // Decode a VIN and return clean vehicle data
@@ -5,8 +7,12 @@ export async function decodeVIN(vin) {
   if (!vin || vin.trim().length !== 17) {
     throw new Error('VIN must be exactly 17 characters')
   }
+  // Catch typos (I, O, Q, symbols) before asking NHTSA, which decodes them anyway
+  const bad = vinError(vin)
+  if (bad) throw new Error(bad)
+  const clean = normalizeVin(vin)
 
-  const res = await fetch(`${BASE}/DecodeVinValues/${vin.trim()}?format=json`)
+  const res = await fetch(`${BASE}/DecodeVinValues/${clean}?format=json`)
   if (!res.ok) throw new Error('NHTSA API unreachable. Check your connection.')
 
   const json = await res.json()
@@ -15,7 +21,7 @@ export async function decodeVIN(vin) {
 
   // NHTSA returns empty strings for unknown fields
   const year  = parseInt(r.ModelYear)
-  const make  = r.Make?.trim()
+  const make  = formatMake(r.Make)
   const model = r.Model?.trim()
   const trim  = r.Trim?.trim()
 
@@ -24,7 +30,7 @@ export async function decodeVIN(vin) {
   }
 
   return {
-    vin: vin.trim().toUpperCase(),
+    vin: clean,
     year,
     make,
     model,

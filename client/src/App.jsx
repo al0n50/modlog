@@ -12,8 +12,11 @@ import BottomNav         from './components/layout/BottomNav'
 const NAV_ROUTES = ['/', '/discover', '/search', '/profile']
 
 function ProtectedRoute({ children }) {
-  const { user } = useAuthStore()
+  const { user, loading } = useAuthStore()
   const { pathname } = useLocation()
+  // Wait for the saved session to load before deciding — otherwise opening or
+  // refreshing any page sends a signed-in user to the sign-in screen.
+  if (loading) return <div className="min-h-screen bg-zinc-950" aria-busy="true" />
   if (!user) return <Navigate to="/auth" state={{ from: pathname }} replace />
   return children
 }

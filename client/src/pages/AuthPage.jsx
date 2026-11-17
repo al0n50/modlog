@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 
 export default function AuthPage() {
@@ -10,10 +10,13 @@ export default function AuthPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const { signIn, signUp } = useAuthStore()
+  const { signIn, signUp, user, loading: sessionLoading } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from || '/'
+
+  // Already signed in (e.g. landed here from an old link): go where they were headed
+  if (!sessionLoading && user) return <Navigate to={from} replace />
 
   const handleSubmit = async () => {
     setError('')

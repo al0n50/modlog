@@ -13,6 +13,12 @@ describe('decodeVIN', () => {
     await expect(decodeVIN('ABC123')).rejects.toThrow(/17 characters/)
   })
 
+  it('rejects impossible VINs before calling NHTSA', async () => {
+    mockFetch({ Results: [] })
+    await expect(decodeVIN('1HGCM82633A00435O')).rejects.toThrow(/never use I, O, or Q/)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('maps NHTSA fields into vehicle + specs', async () => {
     mockFetch({ Results: [{
       ModelYear: '2003', Make: 'HONDA ', Model: 'Accord', Trim: 'EX',
@@ -21,8 +27,8 @@ describe('decodeVIN', () => {
       BodyClass: 'Coupe', PlantCountry: 'UNITED STATES (USA)',
     }] })
     const v = await decodeVIN(` ${VIN.toLowerCase()} `)
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/DecodeVinValues/${VIN.toLowerCase()}?format=json`))
-    expect(v).toMatchObject({ vin: VIN, year: 2003, make: 'HONDA', model: 'Accord', trim: 'EX' })
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/DecodeVinValues/${VIN}?format=json`))
+    expect(v).toMatchObject({ vin: VIN, year: 2003, make: 'Honda', model: 'Accord', trim: 'EX' })
     expect(v.specs).toMatchObject({ engine: '3.0L', cylinders: '6', drivetrain: 'FWD', bodyClass: 'Coupe' })
   })
 
