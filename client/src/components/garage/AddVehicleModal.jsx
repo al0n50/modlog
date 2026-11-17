@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { decodeVIN } from '../../lib/nhtsa'
-import { vehicleRow, vinError as checkVin } from '../../lib/vehicles'
+import { vehicleRow, vinError as checkVin, BODY_STYLES } from '../../lib/vehicles'
 
 // mode: null | 'vin' | 'manual'
 export default function AddVehicleModal({ onSave, onClose }) {
@@ -12,7 +12,7 @@ export default function AddVehicleModal({ onSave, onClose }) {
   const [saving, setSaving]   = useState(false)
 
   const [form, setForm] = useState({
-    vin: '', year: '', make: '', model: '', trim: '', cover_image: ''
+    vin: '', year: '', make: '', model: '', trim: '', cover_image: '', color: '', body_style: ''
   })
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
@@ -31,7 +31,9 @@ export default function AddVehicleModal({ onSave, onClose }) {
         model:       data.model,
         trim:        data.trim,
         cover_image: '',
-        _specs:      data.specs,   // stored for future spec sheet
+        color:       form.color,
+        body_style:  '',
+        _specs:      data.specs,   // engine, body class, etc. — saved with the car
       })
       setVinSuccess(`✅ Decoded: ${data.year} ${data.make} ${data.model}`)
       setMode('manual')            // drop into form to confirm/edit
@@ -181,6 +183,37 @@ export default function AddVehicleModal({ onSave, onClose }) {
                   />
                 </div>
               ))}
+
+              {/* What the 3D garage needs: paint color, and body style when the VIN didn't give one */}
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-xs text-zinc-500 mb-1 block">Paint color</label>
+                  <div className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2">
+                    <input
+                      type="color"
+                      aria-label="Paint color"
+                      value={form.color || '#9CA3AF'}
+                      onChange={e => set('color', e.target.value)}
+                      className="w-8 h-8 bg-transparent border-0 p-0 cursor-pointer"
+                    />
+                    <span className="text-xs text-zinc-400 font-mono">{form.color ? form.color.toUpperCase() : 'Not set'}</span>
+                  </div>
+                </div>
+                {!form._specs?.bodyClass && (
+                  <div className="flex-1">
+                    <label className="text-xs text-zinc-500 mb-1 block">Body style</label>
+                    <select
+                      aria-label="Body style"
+                      value={form.body_style}
+                      onChange={e => set('body_style', e.target.value)}
+                      className="w-full bg-zinc-800 text-white rounded-lg px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">Choose…</option>
+                      {BODY_STYLES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
 
               {vinError && <p className="text-red-400 text-sm">{vinError}</p>}
 

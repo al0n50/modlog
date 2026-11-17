@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/useAuthStore'
 import { useGarageStore } from '../store/useGarageStore'
-import { supabase } from '../lib/supabase'
+import { getUsername, updateBio } from '../lib/db'
 import ModCategoryBadge from '../components/mods/ModCategoryBadge'
 import FollowButton from '../components/ui/FollowButton'
 
@@ -20,17 +20,14 @@ export default function ProfilePage() {
   const [editingBio, setEditingBio] = useState(false)
   const [bio, setBio]               = useState('')
   const [savingBio, setSavingBio]   = useState(false)
+  const [bioError, setBioError]     = useState('')
 
   // If no username param, redirect to own profile
   useEffect(() => {
     if (!username && user) {
       const load = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', user.id)
-          .single()
-        if (data) navigate(`/profile/${data.username}`, { replace: true })
+        const name = await getUsername(user.id).catch(() => null)
+        if (name) navigate(`/profile/${name}`, { replace: true })
       }
       load()
     }
@@ -56,20 +53,18 @@ export default function ProfilePage() {
 
   const handleSaveBio = async () => {
     setSavingBio(true)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ bio })
-      .eq('id', user.id)
-    if (!error) {
+    setBioError('')
+    try {
+      await updateBio(user.id, bio)
       setProfile(p => ({ ...p, bio }))
       setEditingBio(false)
-    }
+    } catch (e) { setBioError(e.message) }
     setSavingBio(false)
   }
 
-  const buildCost = (mods) => {
-    const total = mods?.reduce((s, m) => s + (parseFloat(m.price) || 0), 0) ?? 0
-    return total > 0 ? `$${total.toLocaleString()}` : null
+  const buildCost = (total) => {
+    const n = parseFloat(total) || 0
+    return n > 0 ? `$${n.toLocaleString()}` : null
   }
 
   if (loading) return (
@@ -89,7 +84,7 @@ export default function ProfilePage() {
     </div>
   )
 
-  const totalMods = vehicles.reduce((s, v) => s + (v.mods?.length ?? 0), 0)
+  const totalMods = vehicles.reduce((s, v) => s + (v.mod_count ?? 0), 0)
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-24">
@@ -166,6 +161,7 @@ export default function ProfilePage() {
                       className="bg-zinc-700 hover:bg-zinc-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
                     >Cancel</button>
                   </div>
+                  {bioError && <p className="text-red-400 text-xs">{bioError}</p>}
                 </div>
               )}
             </div>
@@ -225,7 +221,7 @@ export default function ProfilePage() {
 
           <div className="space-y-4">
             {vehicles.map((car, i) => {
-              const cost = buildCost(car.mods)
+              const cost = buildCost(car.total_spent)
               return (
                 <motion.div
                   key={car.id}
@@ -251,7 +247,7 @@ export default function ProfilePage() {
                   </Link>
                   <div className="px-4 py-3 flex items-center gap-3">
                     <span className="text-xs text-zinc-500">
-                      <span className="text-white font-semibold">{car.mods?.length ?? 0}</span> mods
+                      <span className="text-white font-semibold">{car.mod_count}</span> mods
                     </span>
                     {cost && (
                       <>

@@ -1,18 +1,13 @@
 import { create } from 'zustand'
-import { supabase } from '../lib/supabase'
-import { VEHICLE_SELECT, normalizeVehicle, plannedModRow, toWishItem } from '../lib/vehicles'
+import * as db from '../lib/db'
 
-// Helper: silently log a build timeline event
-async function logEvent(vehicleId, type, description, metadata = {}) {
-  await supabase.from('build_events').insert({
-    vehicle_id:  vehicleId,
-    event_type:  type,
-    description,
-    metadata,
-  })
-}
+// Apply a change to a car wherever it's held (garage list and the open build page)
+const patchVehicle = (s, vehicleId, fn) => ({
+  vehicles:      s.vehicles.map(v => v.id === vehicleId ? fn(v) : v),
+  activeVehicle: s.activeVehicle?.id === vehicleId ? fn(s.activeVehicle) : s.activeVehicle,
+})
 
-export const useGarageStore = create((set) => ({
+export const useGarageStore = create((set, get) => ({
   vehicles:      [],
   activeVehicle: null,
   loading:       false,
@@ -21,225 +16,81 @@ export const useGarageStore = create((set) => ({
   // ── Vehicles ──────────────────────────────────────────────
   fetchVehicles: async (userId) => {
     set({ loading: true, error: null })
-    const { data, error } = await supabase
-      .from('vehicles')
-      .select(VEHICLE_SELECT)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-
-    if (error) { set({ error: error.message, loading: false }); return }
-    set({ vehicles: (data || []).map(normalizeVehicle), loading: false })
+    try {
+      set({ vehicles: await db.listMyVehicles(userId), loading: false })
+    } catch (e) { set({ error: e.message, loading: false }) }
   },
 
   fetchVehicleById: async (vehicleId) => {
     set({ loading: true, error: null })
-    const { data, error } = await supabase
-      .from('vehicles')
-      .select(VEHICLE_SELECT)
-      .eq('id', vehicleId)
-      .single()
-
-    if (error) { set({ error: error.message, loading: false }); return }
-    set({ activeVehicle: normalizeVehicle(data), loading: false })
+    try {
+      set({ activeVehicle: await db.getVehicle(vehicleId), loading: false })
+    } catch (e) { set({ error: e.message, loading: false }) }
   },
 
   addVehicle: async (vehicleData, userId) => {
-    const { data, error } = await supabase
-      .from('vehicles')
-      .insert({ ...vehicleData, user_id: userId })
-      .select(VEHICLE_SELECT)
-      .single()
-
-    if (error) throw error
-    const vehicle = normalizeVehicle(data)
+    const vehicle = await db.createVehicle(vehicleData, userId)
     set(s => ({ vehicles: [vehicle, ...s.vehicles] }))
     return vehicle
   },
 
   deleteVehicle: async (vehicleId) => {
-    const { error } = await supabase.from('vehicles').delete().eq('id', vehicleId)
-    if (error) throw error
-    set(s => ({ vehicles: s.vehicles.filter(v => v.id !== vehicleId) }))
+    const s = get()
+    const vehicle = s.vehicles.find(v => v.id === vehicleId) ||
+      (s.activeVehicle?.id === vehicleId ? s.activeVehicle : null)
+    if (!vehicle) throw new db.DataError('This build is no longer in your garage.')
+    await db.deleteVehicle(vehicle)
+    set(st => ({
+      vehicles:      st.vehicles.filter(v => v.id !== vehicleId),
+      activeVehicle: st.activeVehicle?.id === vehicleId ? null : st.activeVehicle,
+    }))
   },
 
-  // ── Public feed ──────────────────────────────────────────
-  fetchPublicVehicles: async () => {
-    const { data, error } = await supabase
-      .from('vehicles')
-      .select(`${VEHICLE_SELECT}, profiles(username, display_name, avatar_url)`)
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-      .limit(50)
-
-    if (error) throw error
-    return (data || []).map(normalizeVehicle)
-  },
-
-  fetchPublicVehiclesByUser: async (username) => {
-    const { data: profile, error: profErr } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url, bio, created_at')
-      .eq('username', username)
-      .single()
-
-    if (profErr) throw new Error('User not found')
-
-    const { data: vehicles, error: vehErr } = await supabase
-      .from('vehicles')
-      .select(VEHICLE_SELECT)
-      .eq('user_id', profile.id)
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-
-    if (vehErr) throw vehErr
-    return { profile, vehicles: (vehicles || []).map(normalizeVehicle) }
-  },
+  // ── Public feeds (build summaries, paged) ──────────────────
+  fetchPublicVehicles: (opts) => db.listPublicBuilds(opts),
+  fetchPublicVehiclesByUser: (username) => db.getPublicGarage(username),
 
   togglePublic: async (vehicleId, currentValue) => {
-    const { error } = await supabase
-      .from('vehicles')
-      .update({ is_public: !currentValue })
-      .eq('id', vehicleId)
-
-    if (error) throw error
-
-    const update = (v) => v.id === vehicleId ? { ...v, is_public: !currentValue } : v
-    set(s => ({
-      vehicles:      s.vehicles.map(update),
-      activeVehicle: s.activeVehicle?.id === vehicleId
-        ? { ...s.activeVehicle, is_public: !currentValue }
-        : s.activeVehicle,
-    }))
+    await db.updateVehicle(vehicleId, { is_public: !currentValue })
+    set(s => patchVehicle(s, vehicleId, v => ({ ...v, is_public: !currentValue })))
   },
 
   updateCoverImage: async (vehicleId, imageUrl) => {
-    const { error } = await supabase
-      .from('vehicles')
-      .update({ cover_image: imageUrl })
-      .eq('id', vehicleId)
-
-    if (error) throw error
-
-    const update = (v) => v.id === vehicleId ? { ...v, cover_image: imageUrl } : v
-    set(s => ({
-      vehicles:      s.vehicles.map(update),
-      activeVehicle: s.activeVehicle?.id === vehicleId
-        ? { ...s.activeVehicle, cover_image: imageUrl }
-        : s.activeVehicle,
-    }))
+    await db.updateVehicle(vehicleId, { cover_image: imageUrl })
+    set(s => patchVehicle(s, vehicleId, v => ({ ...v, cover_image: imageUrl })))
   },
 
-  // ── Installed Mods ────────────────────────────────────────
+  // ── Done mods (the database records each change on the build timeline) ──
   addMod: async (vehicleId, modData) => {
-    const { data, error } = await supabase
-      .from('mods')
-      .insert({ ...modData, vehicle_id: vehicleId, status: 'done' })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    // Auto-log timeline event
-    await logEvent(vehicleId, 'mod_added',
-      `Added ${data.category !== 'Other' ? data.category + ': ' : ''}${data.name}`,
-      { mod_id: data.id, category: data.category, price: data.price }
-    )
-
-    const update = (v) => v.id === vehicleId ? { ...v, mods: [...v.mods, data] } : v
-    set(s => ({
-      vehicles:      s.vehicles.map(update),
-      activeVehicle: s.activeVehicle?.id === vehicleId
-        ? { ...s.activeVehicle, mods: [...s.activeVehicle.mods, data] }
-        : s.activeVehicle,
-    }))
+    const mod = await db.addDoneMod(vehicleId, modData)
+    set(s => patchVehicle(s, vehicleId, v => ({ ...v, mods: [...v.mods, mod] })))
+    return mod
   },
 
-  deleteMod: async (vehicleId, modId, modName) => {
-    const { error } = await supabase.from('mods').delete().eq('id', modId)
-    if (error) throw error
-
-    await logEvent(vehicleId, 'mod_removed', `Removed: ${modName || 'a mod'}`, { mod_id: modId })
-
-    const update = (v) => v.id === vehicleId ? { ...v, mods: v.mods.filter(m => m.id !== modId) } : v
-    set(s => ({
-      vehicles:      s.vehicles.map(update),
-      activeVehicle: s.activeVehicle?.id === vehicleId
-        ? { ...s.activeVehicle, mods: s.activeVehicle.mods.filter(m => m.id !== modId) }
-        : s.activeVehicle,
-    }))
+  deleteMod: async (vehicleId, modId) => {
+    await db.deleteMod(modId)
+    set(s => patchVehicle(s, vehicleId, v => ({ ...v, mods: v.mods.filter(m => m.id !== modId) })))
   },
 
-  // ── Wishlist ──────────────────────────────────────────────
+  // ── Planned mods (the wishlist) ────────────────────────────
   addWishItem: async (vehicleId, itemData) => {
-    const { data: row, error } = await supabase
-      .from('mods')
-      .insert(plannedModRow(vehicleId, itemData))
-      .select()
-      .single()
-
-    if (error) throw error
-    const data = toWishItem(row)
-
-    const update = (v) => v.id === vehicleId ? { ...v, wishlist_items: [...v.wishlist_items, data] } : v
-    set(s => ({
-      vehicles:      s.vehicles.map(update),
-      activeVehicle: s.activeVehicle?.id === vehicleId
-        ? { ...s.activeVehicle, wishlist_items: [...s.activeVehicle.wishlist_items, data] }
-        : s.activeVehicle,
-    }))
+    const item = await db.addPlannedMod(vehicleId, itemData)
+    set(s => patchVehicle(s, vehicleId, v => ({ ...v, wishlist_items: [...v.wishlist_items, item] })))
+    return item
   },
 
   deleteWishItem: async (vehicleId, itemId) => {
-    const { error } = await supabase.from('mods').delete().eq('id', itemId).eq('status', 'planned')
-    if (error) throw error
-
-    const update = (v) => v.id === vehicleId
-      ? { ...v, wishlist_items: v.wishlist_items.filter(w => w.id !== itemId) }
-      : v
-    set(s => ({
-      vehicles:      s.vehicles.map(update),
-      activeVehicle: s.activeVehicle?.id === vehicleId
-        ? { ...s.activeVehicle, wishlist_items: s.activeVehicle.wishlist_items.filter(w => w.id !== itemId) }
-        : s.activeVehicle,
-    }))
+    await db.deleteMod(itemId, { status: 'planned' })
+    set(s => patchVehicle(s, vehicleId, v => ({ ...v, wishlist_items: v.wishlist_items.filter(w => w.id !== itemId) })))
   },
 
   promoteWishItem: async (vehicleId, wishItem, modData) => {
-    // A planned mod becomes a done mod: same row, new status and install details
-    const { data: mod, error: modErr } = await supabase
-      .from('mods')
-      .update({
-        status:       'done',
-        name:         modData.name,
-        category:     modData.category,
-        brand:        modData.brand        || null,
-        price:        modData.price        || null,
-        install_date: modData.install_date || null,
-        notes:        modData.notes        || null,
-      })
-      .eq('id', wishItem.id)
-      .select()
-      .single()
-
-    if (modErr) throw modErr
-
-    await logEvent(vehicleId, 'wishlist_promoted',
-      `Installed from wishlist: ${mod.name}`,
-      { mod_id: mod.id, wish_id: wishItem.id, category: mod.category }
-    )
-
-    const update = (v) => v.id === vehicleId ? {
+    const mod = await db.markPlannedDone(wishItem.id, modData)
+    set(s => patchVehicle(s, vehicleId, v => ({
       ...v,
-      mods:          [...v.mods, mod],
-      wishlist_items: v.wishlist_items.filter(w => w.id !== wishItem.id)
-    } : v
-    set(s => ({
-      vehicles:      s.vehicles.map(update),
-      activeVehicle: s.activeVehicle?.id === vehicleId ? {
-        ...s.activeVehicle,
-        mods:          [...s.activeVehicle.mods, mod],
-        wishlist_items: s.activeVehicle.wishlist_items.filter(w => w.id !== wishItem.id)
-      } : s.activeVehicle,
-    }))
+      mods:           [...v.mods, mod],
+      wishlist_items: v.wishlist_items.filter(w => w.id !== wishItem.id),
+    })))
+    return mod
   },
 }))

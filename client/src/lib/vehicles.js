@@ -10,6 +10,13 @@
 export const VEHICLE_SELECT = '*, mods(*)'
 
 const VIN_PATTERN = /^[A-HJ-NPR-Z0-9]{17}$/
+const HEX_COLOR   = /^#[0-9A-Fa-f]{6}$/
+
+// Body styles there's a generic 3D model for (Option B). Matches the database list.
+export const BODY_STYLES = [
+  ['sedan', 'Sedan'], ['coupe', 'Coupe'], ['convertible', 'Convertible'], ['hatchback', 'Hatchback'],
+  ['wagon', 'Wagon'], ['suv', 'SUV / Crossover'], ['pickup', 'Pickup'], ['minivan', 'Minivan'], ['van', 'Van'],
+]
 
 // Planned mod row (database) → wishlist item (UI)
 export function toWishItem(mod) {
@@ -88,6 +95,9 @@ export function vehicleRow(form) {
     model:      (form.model || '').trim(),
     trim:       (form.trim || '').trim() || null,
     body_class: (specs.bodyClass || '').trim() || null,
+    // Picked by the owner; otherwise the database derives it from body_class
+    body_style: BODY_STYLES.some(([v]) => v === form.body_style) ? form.body_style : null,
+    color:      HEX_COLOR.test(form.color || '') ? form.color.toUpperCase() : null,
     specs,
   }
 }

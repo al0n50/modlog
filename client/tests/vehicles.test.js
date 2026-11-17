@@ -66,7 +66,13 @@ describe('vehicleRow', () => {
     const row = vehicleRow({ vin: 'jf1va1a60k9800001', year: '2019', make: ' Subaru ', model: 'WRX', trim: '',
       _specs: { bodyClass: 'Sedan/Saloon', drivetrain: 'AWD' } })
     expect(row).toEqual({ vin: 'JF1VA1A60K9800001', year: 2019, make: 'Subaru', model: 'WRX', trim: null,
-      body_class: 'Sedan/Saloon', specs: { bodyClass: 'Sedan/Saloon', drivetrain: 'AWD' } })
+      body_class: 'Sedan/Saloon', body_style: null, color: null, specs: { bodyClass: 'Sedan/Saloon', drivetrain: 'AWD' } })
+  })
+  it('saves paint color and a picked body style, ignoring invalid values', () => {
+    expect(vehicleRow({ year: '2021', make: 'Toyota', model: 'GR86', color: '#1e3a8a', body_style: 'coupe' }))
+      .toMatchObject({ color: '#1E3A8A', body_style: 'coupe' })
+    expect(vehicleRow({ year: '2021', make: 'Toyota', model: 'GR86', color: 'red', body_style: 'spaceship' }))
+      .toMatchObject({ color: null, body_style: null })
   })
   it('works for manual entry with no decode', () => {
     expect(vehicleRow({ year: '2021', make: 'Toyota', model: 'GR86' })).toMatchObject({ vin: null, body_class: null, specs: {} })

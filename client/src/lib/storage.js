@@ -58,3 +58,16 @@ export async function listVehiclePhotos(userId, vehicleId) {
     url:  supabase.storage.from(BUCKET).getPublicUrl(`${userId}/${vehicleId}/${f.name}`).data.publicUrl
   }))
 }
+
+// Remove every photo of a car (used before deleting the car; the database can't delete files)
+export async function deleteAllVehiclePhotos(userId, vehicleId) {
+  const folder = `${userId}/${vehicleId}`
+  const { data, error } = await supabase.storage.from(BUCKET).list(folder, { limit: 1000 })
+  if (error) throw error
+  const paths = (data || []).map(f => `${folder}/${f.name}`)
+  if (paths.length) {
+    const { error: rmError } = await supabase.storage.from(BUCKET).remove(paths)
+    if (rmError) throw rmError
+  }
+  return paths.length
+}

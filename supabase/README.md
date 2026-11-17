@@ -9,6 +9,7 @@ is a new SQL file in `migrations/`, applied in filename order.
 | `20261117180901_v1_data_model.sql` | v1 data model: exact car identity (`body_class`, `specs`), one `mods` table with `status` = `done` or `planned`, data rules (year, VIN format, price, categories, reactions), `updated_at`, and indexes on every link between tables. |
 | `20261117180946_security_hardening.sql` | Locks down the sign-up function, replaces broad rules with explicit per-action rules, limits photo uploads to images up to 5 MB, and adds `ai_requests` for rate-limiting the AI Advisor. |
 | `20261117183824_private_photo_listing.sql` | Photos follow their car's privacy: only the owner can list a private car's photos (before, anyone could list the whole bucket). |
+| `20261117205936_build_data_layer.sql` | Phase 4: the database writes the build timeline (clients can't fake history), `vehicle_summaries` for feeds, paint `color` and `body_style` on cars, and the 3D model catalog (`car_models`, `car_model_for()`, `car-models` bucket) for Option B. |
 
 Filenames match the versions recorded in production's migration history, so the repo and the live database stay in sync.
 

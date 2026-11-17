@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import * as db from '../lib/db'
 
 const EMPTY = { fire: 0, wrench: 0, eye: 0 }
 const NONE  = { fire: false, wrench: false, eye: false }
@@ -26,13 +26,11 @@ export function useReactions(vehicleId, userId) {
   useEffect(() => {
     if (!vehicleId) return
     let cancelled = false
-    supabase
-      .from('reactions')
-      .select('type, user_id')
-      .eq('vehicle_id', vehicleId)
-      .then(({ data }) => {
+    db.listReactions(vehicleId)
+      .catch(() => [])
+      .then(rows => {
         if (cancelled) return
-        const { counts, mine } = tallyReactions(data, userId)
+        const { counts, mine } = tallyReactions(rows, userId)
         setReactions(counts)
         setMine(mine)
         setLoading(false)
@@ -49,17 +47,11 @@ export function useReactions(vehicleId, userId) {
     setReactions(p => ({ ...p, [type]: p[type] + delta }))
     setMine(p => ({ ...p, [type]: !isActive }))
 
-    const { error } = isActive
-      ? await supabase.from('reactions')
-          .delete()
-          .eq('vehicle_id', vehicleId)
-          .eq('user_id', userId)
-          .eq('type', type)
-      : await supabase.from('reactions')
-          .insert({ vehicle_id: vehicleId, user_id: userId, type })
-
-    // Roll back if the write failed
-    if (error) {
+    try {
+      if (isActive) await db.removeReaction(vehicleId, userId, type)
+      else          await db.addReaction(vehicleId, userId, type)
+    } catch {
+      // Roll back if the write failed
       setReactions(p => ({ ...p, [type]: p[type] - delta }))
       setMine(p => ({ ...p, [type]: isActive }))
     }
@@ -80,22 +72,10 @@ export function useFollow(targetUserId, currentUserId) {
     let cancelled = false
 
     const load = async () => {
-      const { count: total } = await supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', targetUserId)
-
-      let isFollowing = false
-      if (currentUserId && currentUserId !== targetUserId) {
-        // maybeSingle: "not following" is zero rows, which is not an error
-        const { data } = await supabase
-          .from('follows')
-          .select('follower_id')
-          .eq('follower_id', currentUserId)
-          .eq('following_id', targetUserId)
-          .maybeSingle()
-        isFollowing = !!data
-      }
+      const total = await db.followerCount(targetUserId).catch(() => 0)
+      const isFollowing = currentUserId && currentUserId !== targetUserId
+        ? await db.isFollowing(currentUserId, targetUserId).catch(() => false)
+        : false
 
       if (cancelled) return
       setCount(total || 0)
@@ -116,16 +96,11 @@ export function useFollow(targetUserId, currentUserId) {
     setFollowing(!wasFollowing)
     setCount(p => p + delta)
 
-    const { error } = wasFollowing
-      ? await supabase.from('follows')
-          .delete()
-          .eq('follower_id', currentUserId)
-          .eq('following_id', targetUserId)
-      : await supabase.from('follows')
-          .insert({ follower_id: currentUserId, following_id: targetUserId })
-
-    // Roll back if the write failed
-    if (error) {
+    try {
+      if (wasFollowing) await db.unfollow(currentUserId, targetUserId)
+      else              await db.follow(currentUserId, targetUserId)
+    } catch {
+      // Roll back if the write failed
       setFollowing(wasFollowing)
       setCount(p => p - delta)
     }

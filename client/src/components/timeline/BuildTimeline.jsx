@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { listBuildEvents } from '../../lib/db'
 
 const EVENT_ICONS = {
   mod_added:          { icon: '🔧', color: 'text-green-400',  bg: 'bg-green-900/30 border-green-800' },
   mod_removed:        { icon: '🗑️', color: 'text-red-400',    bg: 'bg-red-900/30 border-red-800'     },
   wishlist_promoted:  { icon: '⭐', color: 'text-orange-400', bg: 'bg-orange-900/30 border-orange-800' },
+  mod_planned:        { icon: '🛒', color: 'text-blue-400',   bg: 'bg-blue-900/30 border-blue-800'     },
+  plan_removed:       { icon: '↩️', color: 'text-zinc-400',   bg: 'bg-zinc-800 border-zinc-700'        },
 }
 
 const DEFAULT = { icon: '📝', color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' }
@@ -12,23 +14,23 @@ const DEFAULT = { icon: '📝', color: 'text-zinc-400', bg: 'bg-zinc-800 border-
 export default function BuildTimeline({ vehicleId }) {
   const [events, setEvents]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
 
   useEffect(() => {
     if (!vehicleId) return
     const fetch = async () => {
       setLoading(true)
-      const { data } = await supabase
-        .from('build_events')
-        .select('*')
-        .eq('vehicle_id', vehicleId)
-        .order('created_at', { ascending: false })
-      setEvents(data || [])
+      setError('')
+      try {
+        setEvents(await listBuildEvents(vehicleId))
+      } catch (e) { setError(e.message) }
       setLoading(false)
     }
     fetch()
   }, [vehicleId])
 
   if (loading) return <p className="text-zinc-600 text-sm italic">Loading timeline...</p>
+  if (error) return <p className="text-red-400 text-sm">{error}</p>
 
   if (events.length === 0) return (
     <p className="text-zinc-600 text-sm italic">No events yet — start adding mods!</p>

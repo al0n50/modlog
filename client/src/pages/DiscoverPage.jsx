@@ -13,21 +13,38 @@ export default function DiscoverPage() {
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
+  const [page, setPage]         = useState(0)
+  const [hasMore, setHasMore]   = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fetchPublicVehicles()
-        setVehicles(data)
+        const { items, hasMore } = await fetchPublicVehicles({ page: 0 })
+        setVehicles(items)
+        setHasMore(hasMore)
       } catch (e) { setError(e.message) }
       finally { setLoading(false) }
     }
     load()
   }, [fetchPublicVehicles])
 
-  const buildCost = (mods) => {
-    const total = mods?.reduce((s, m) => s + (parseFloat(m.price) || 0), 0) ?? 0
-    return total > 0 ? `$${total.toLocaleString()}` : null
+  const loadMore = async () => {
+    setLoadingMore(true)
+    try {
+      const next = page + 1
+      const { items, hasMore } = await fetchPublicVehicles({ page: next })
+      // a build can shift pages if new ones are shared meanwhile; skip ones already shown
+      setVehicles(v => [...v, ...items.filter(i => !v.some(x => x.id === i.id))])
+      setHasMore(hasMore)
+      setPage(next)
+    } catch (e) { setError(e.message) }
+    finally { setLoadingMore(false) }
+  }
+
+  const buildCost = (total) => {
+    const n = parseFloat(total) || 0
+    return n > 0 ? `$${n.toLocaleString()}` : null
   }
 
   return (
@@ -40,7 +57,7 @@ export default function DiscoverPage() {
             <h1 className="text-lg font-black text-white leading-none">Discover</h1>
             <p className="text-xs text-zinc-500 mt-0.5">Community builds</p>
           </div>
-          <span className="text-xs text-zinc-600">{vehicles.length} builds</span>
+          <span className="text-xs text-zinc-600">{vehicles.length}{hasMore ? '+' : ''} builds</span>
         </div>
       </header>
 
@@ -74,7 +91,7 @@ export default function DiscoverPage() {
         )}
 
         {vehicles.map((car, i) => {
-          const cost     = buildCost(car.mods)
+          const cost     = buildCost(car.total_spent)
           const username = car.profiles?.username
 
           return (
@@ -124,7 +141,7 @@ export default function DiscoverPage() {
                 {/* Stats */}
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-zinc-500">
-                    <span className="text-white font-semibold">{car.mods?.length ?? 0}</span> mods
+                    <span className="text-white font-semibold">{car.mod_count}</span> mods
                   </span>
                   {cost && (
                     <>
@@ -147,9 +164,9 @@ export default function DiscoverPage() {
                     {car.mods.slice(0, 4).map(mod => (
                       <ModCategoryBadge key={mod.id} category={mod.category} />
                     ))}
-                    {car.mods.length > 4 && (
+                    {car.mod_count > 4 && (
                       <span className="text-xs text-zinc-600 self-center">
-                        +{car.mods.length - 4} more
+                        +{car.mod_count - 4} more
                       </span>
                     )}
                   </div>
@@ -163,6 +180,16 @@ export default function DiscoverPage() {
             </motion.div>
           )
         })}
+
+        {hasMore && (
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="w-full py-3 rounded-xl border border-zinc-800 text-sm text-zinc-400 hover:text-white hover:border-zinc-600 disabled:opacity-50 transition-colors"
+          >
+            {loadingMore ? 'Loading...' : 'Load more builds'}
+          </button>
+        )}
       </main>
     </div>
   )

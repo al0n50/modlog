@@ -26,16 +26,7 @@ export const useAuthStore = create((set) => ({
       options: { data: { username } }
     })
     if (error) throw error
-
-    // Ensure profile exists even if trigger is slow
-    if (data.user) {
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        username: username || email.split('@')[0],
-        display_name: username || email.split('@')[0],
-      }, { onConflict: 'id' })
-    }
-
+    // The database creates the profile (with a unique username) when the account is created
     return data
   },
 
