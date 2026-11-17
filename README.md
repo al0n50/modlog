@@ -7,6 +7,10 @@
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-000020?style=flat&logo=expo&logoColor=white)
+[![CI](https://github.com/al0n50/modlog/actions/workflows/ci.yml/badge.svg)](https://github.com/al0n50/modlog/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**Live:** [modlog.vercel.app](https://modlog.vercel.app) · **Roadmap:** [open issues](https://github.com/al0n50/modlog/issues)
 
 ---
 
@@ -146,3 +150,9 @@ npm start
 ---
 
 Built by [Alonso Ochoa](https://github.com/al0n50)
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Alonso Ochoa
