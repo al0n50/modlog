@@ -41,6 +41,12 @@ describe('garage store: one mods table with done/planned status', () => {
     expect(v.wishlist_items).toEqual([expect.objectContaining({ name: 'Tune', estimated_price: 600 })])
   })
 
+  it('loads a public profile with its sign-up date (for "Member Since")', async () => {
+    nextResult = { data: { id: 'u1', username: 'al0n50', created_at: '2026-11-17T00:00:00Z' }, error: null }
+    await useGarageStore.getState().fetchPublicVehiclesByUser('al0n50').catch(() => {})
+    expect(op(calls[0], 'select')[1]).toMatch(/\bcreated_at\b/)
+  })
+
   it('saves a new done mod with status done', async () => {
     nextResult = { data: { id: 'm9', vehicle_id: 'v1', name: 'Intake', category: 'Engine', status: 'done' }, error: null }
     await useGarageStore.getState().addMod('v1', { name: 'Intake', category: 'Engine' })

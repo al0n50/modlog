@@ -176,7 +176,7 @@ export default function ProfilePage() {
             {[
               { label: 'Public Builds', value: vehicles.length,  color: 'text-orange-400' },
               { label: 'Total Mods',    value: totalMods,         color: 'text-green-400'  },
-              { label: 'Member Since',  value: new Date(profile?.created_at).getFullYear(), color: 'text-blue-400' },
+              { label: 'Member Since',  value: profile?.created_at ? new Date(profile.created_at).getFullYear() : '—', color: 'text-blue-400' },
             ].map(({ label, value, color }) => (
               <div key={label} className="text-center">
                 <p className={`text-xl font-black ${color}`}>{value}</p>

@@ -78,7 +78,7 @@ export const useGarageStore = create((set) => ({
   fetchPublicVehiclesByUser: async (username) => {
     const { data: profile, error: profErr } = await supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, bio')
+      .select('id, username, display_name, avatar_url, bio, created_at')
       .eq('username', username)
       .single()
 
