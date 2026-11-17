@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { uploadVehiclePhoto, deleteVehiclePhoto, listVehiclePhotos } from '../../lib/storage'
+import { uploadVehiclePhoto, deleteVehiclePhoto, listVehiclePhotos, PHOTO_TYPES } from '../../lib/storage'
 import { useGarageStore } from '../../store/useGarageStore'
 
 export default function PhotoGallery({ vehicle, userId }) {
@@ -31,12 +31,15 @@ export default function PhotoGallery({ vehicle, userId }) {
     setUploading(true)
     setError('')
     try {
-      const urls = await Promise.all(
+      // Upload each file on its own so one bad file doesn't hide the ones that worked
+      const results = await Promise.allSettled(
         files.map(f => uploadVehiclePhoto(userId, vehicle.id, f))
       )
-      setPhotos(p => [...p, ...urls.map((url, i) => ({ name: files[i].name, url }))])
-    } catch (e) { setError(e.message) }
-    finally {
+      const added = results.flatMap((r, i) => r.status === 'fulfilled' ? [{ name: files[i].name, url: r.value }] : [])
+      const failed = results.flatMap(r => r.status === 'rejected' ? [r.reason?.message || 'Upload failed'] : [])
+      if (added.length) setPhotos(p => [...p, ...added])
+      if (failed.length) setError(failed.join(' '))
+    } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
     }
@@ -86,7 +89,7 @@ export default function PhotoGallery({ vehicle, userId }) {
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept={PHOTO_TYPES.join(',')}
           multiple
           className="hidden"
           onChange={handleUpload}

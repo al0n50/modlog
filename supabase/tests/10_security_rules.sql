@@ -131,6 +131,29 @@ set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000b"}';
 select pg_temp.check((select count(*) = 0 from public.ai_requests), 'B cannot see A''s AI usage');
 select pg_temp.fails($$delete from public.ai_requests$$, 'deleting AI usage to dodge the limit');
 
+-- ── Photos follow their car's privacy ──────────────────────────────
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a"}';
+update public.vehicles set is_public = false where id = '10000000-0000-0000-0000-000000000001';
+insert into storage.objects (bucket_id, name, owner) values
+  ('vehicle-photos', '00000000-0000-0000-0000-00000000000a/10000000-0000-0000-0000-000000000001/front.jpg',
+   '00000000-0000-0000-0000-00000000000a');
+select pg_temp.check((select count(*) = 1 from storage.objects), 'A can see photos of their own private car');
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000b"}';
+select pg_temp.check((select count(*) = 0 from storage.objects), 'B cannot list photos of A''s private car');
+select pg_temp.fails($$insert into storage.objects (bucket_id, name) values
+  ('vehicle-photos', '00000000-0000-0000-0000-00000000000a/10000000-0000-0000-0000-000000000001/fake.jpg')$$,
+  'B uploading into A''s photo folder');
+set local role anon;
+set local request.jwt.claims = '{}';
+select pg_temp.check((select count(*) = 0 from storage.objects), 'logged-out visitors cannot list a private car''s photos');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a"}';
+update public.vehicles set is_public = true where id = '10000000-0000-0000-0000-000000000001';
+set local role anon;
+set local request.jwt.claims = '{}';
+select pg_temp.check((select count(*) = 1 from storage.objects), 'logged-out visitors can see a public car''s photos');
+
 -- ── Photo bucket limits ─────────────────────────────────────────────
 reset role;
 select pg_temp.check((select file_size_limit = 5242880 and 'image/jpeg' = any(allowed_mime_types)
