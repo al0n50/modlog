@@ -2,7 +2,10 @@
 // Keeps the Gemini API key on the server and only answers signed-in ModLog users.
 import { createClient } from '@supabase/supabase-js'
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash'
+// Free-tier models, tried in order. Google renames and retires models, so if one is
+// no longer found (404) the next is used instead of the advisor breaking.
+// GEMINI_MODEL, if set, is tried first.
+export const MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-3.5-flash', 'gemini-3.1-flash-lite'].filter(Boolean))]
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 export const HOURLY_LIMIT = Number(process.env.AI_HOURLY_LIMIT) || 10
@@ -58,7 +61,10 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return res.status(500).json({ error: 'AI Advisor is not configured (missing GEMINI_API_KEY).' })
+  if (!apiKey) {
+    console.error('AI Advisor: GEMINI_API_KEY is not set')
+    return res.status(503).json({ error: 'The AI Advisor is not set up yet.' })
+  }
 
   // Require a valid Supabase session so the endpoint can't be used as an open proxy.
   // Fail closed: without Supabase config there is no way to check the session.
@@ -99,19 +105,28 @@ export default async function handler(req, res) {
   if (logError) return res.status(503).json({ error: 'AI Advisor is temporarily unavailable. Try again shortly.' })
 
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-      {
+    const request = JSON.stringify({
+      contents: [{ parts: [{ text: buildPrompt(body) }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: 'application/json' },
+    })
+    let r, data
+    for (const model of MODELS) {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: buildPrompt(body) }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: 'application/json' },
-        }),
-      }
-    )
-
-    const data = await r.json().catch(() => ({}))
+        body: request,
+      })
+      data = await r.json().catch(() => ({}))
+      if (r.status !== 404) break
+    }
+    if (r.status === 429) {
+      return res.status(503).json({ error: 'The AI Advisor is busy right now (Gemini usage limit). Try again in a minute.' })
+    }
+    if (r.status === 400 || r.status === 401 || r.status === 403) {
+      // Bad or blocked key: a setup problem for the site owner, not something the user can fix
+      console.error('Gemini rejected the request:', r.status, data?.error?.message)
+      return res.status(503).json({ error: 'The AI Advisor is temporarily unavailable.' })
+    }
     if (!r.ok) return res.status(502).json({ error: data?.error?.message || 'Gemini API request failed' })
 
     const raw = (data.candidates?.[0]?.content?.parts || [])

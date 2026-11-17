@@ -65,10 +65,33 @@ describe('POST /api/recommendations', () => {
     expect(r.statusCode).toBe(400)
   })
 
-  it('reports missing server config', async () => {
+  it('reports a missing Gemini key without exposing setup details', async () => {
     delete process.env.GEMINI_API_KEY
     const r = res(); await handler(req(), r)
-    expect(r.statusCode).toBe(500)
+    expect(r.statusCode).toBe(503)
+    expect(r.body.error).not.toMatch(/GEMINI_API_KEY/)
+  })
+
+  it('falls back to the next free model when Google no longer has one (404)', async () => {
+    const { MODELS } = await import('../api/recommendations.js')
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ error: { message: 'model not found' } }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: '[]' }] } }] }) }))
+    const r = res(); await handler(req(), r)
+    expect(r.statusCode).toBe(200)
+    expect(fetch.mock.calls.map(c => c[0].match(/models\/([^:]+)/)[1])).toEqual(MODELS.slice(0, 2))
+  })
+
+  it('explains Gemini usage limits and hides key problems from users', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({ error: { message: 'Resource exhausted' } }) }))
+    let r = res(); await handler(req(), r)
+    expect(r.statusCode).toBe(503)
+    expect(r.body.error).toMatch(/busy/)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => ({ error: { message: 'API key not valid' } }) }))
+    r = res(); await handler(req(), r)
+    expect(r.statusCode).toBe(503)
+    expect(r.body.error).not.toMatch(/key/i)
   })
 
   it('returns parsed recommendations and keeps the key out of the URL', async () => {
