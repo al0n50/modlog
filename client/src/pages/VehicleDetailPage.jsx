@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { useGarageStore } from '../store/useGarageStore'
@@ -11,18 +11,6 @@ import BuildTimeline from '../components/timeline/BuildTimeline'
 import AIAdvisor from '../components/garage/AIAdvisor'
 import PhotoGallery from '../components/photos/PhotoGallery'
 import { coverImage } from '../lib/vehicles'
-import { hasWebGL } from '../lib/car3d/webgl'
-
-// three.js is big: download it only when a build page shows the car in 3D
-const CarViewer = lazy(() => import('../components/garage/CarViewer'))
-
-// If the 3D code can't load (dropped connection) or WebGL fails to start, show the photo instead
-class ViewerFallback extends Component {
-  state = { failed: false }
-  static getDerivedStateFromError() { return { failed: true } }
-  componentDidCatch() { this.props.onFail() }
-  render() { return this.state.failed ? null : this.props.children }
-}
 
 const SECTIONS = ['Overview', 'Mods', 'Wishlist', 'Timeline', 'Photos']
 
@@ -44,9 +32,6 @@ export default function VehicleDetailPage() {
   const [editingImage, setEditingImage]   = useState(false)
   const [newImageUrl, setNewImageUrl]     = useState('')
   const [savingImage, setSavingImage]     = useState(false)
-  // Show the car in 3D when the browser can; the cover photo is the fallback and a tap away
-  const [can3D]                           = useState(hasWebGL)
-  const [view, setView]                   = useState(can3D ? '3d' : 'photo')
 
   useEffect(() => {
     if (id) fetchVehicleById(id)
@@ -128,37 +113,15 @@ export default function VehicleDetailPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-12">
 
-      {/* Hero: the car in 3D, or its cover photo */}
-      <div className={`relative w-full bg-zinc-900 ${view === '3d' ? 'h-72' : 'h-64'}`}>
-        {view === '3d' ? (
-          <ViewerFallback onFail={() => setView('photo')}>
-            <Suspense fallback={<div className="w-full h-full animate-pulse bg-zinc-900" />}>
-              <CarViewer bodyStyle={car.body_style} color={car.color} label={`${car.year} ${car.make} ${car.model}`} />
-            </Suspense>
-          </ViewerFallback>
-        ) : (
-          <img
-            src={coverImage(car)}
-            alt={car.model}
-            className="w-full h-full object-cover"
-            onError={e => e.target.src = 'https://placehold.co/800x400/1a1a1a/orange?text=No+Image'}
-          />
-        )}
-        <div className={`absolute inset-0 pointer-events-none bg-gradient-to-t ${view === '3d' ? 'from-zinc-950/80 via-transparent' : 'from-zinc-950 via-zinc-950/40'} to-transparent`} />
-
-        {/* 3D / photo switch */}
-        {can3D && (
-          <div className="absolute bottom-3 right-3 flex rounded-lg overflow-hidden bg-black/60 backdrop-blur-sm text-xs" role="group" aria-label="Hero view">
-            {[['3d', '3D'], ['photo', 'Photo']].map(([v, text]) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                aria-pressed={view === v}
-                className={`px-3 py-1.5 transition-colors ${view === v ? 'bg-orange-500 text-white' : 'text-zinc-300 hover:bg-white/10'}`}
-              >{text}</button>
-            ))}
-          </div>
-        )}
+      {/* Hero image */}
+      <div className="relative w-full h-64 bg-zinc-900">
+        <img
+          src={coverImage(car)}
+          alt={car.model}
+          className="w-full h-full object-cover"
+          onError={e => e.target.src = 'https://placehold.co/800x400/1a1a1a/orange?text=No+Image'}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
 
         {/* Back button */}
         <button
