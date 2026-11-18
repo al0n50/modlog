@@ -17,14 +17,14 @@ Social, search and the mobile app come after v1.
 | Fundamental | How it works here | Status |
 |---|---|---|
 | **Frontend & backend** | React 19 + Vite SPA (`client/src`) in the browser. Backend = Supabase (Postgres, Auth, Storage) + Vercel serverless functions (`client/api`). | ✅ |
-| **Repo** | One repo, `main` is production. README, MIT license, CI, secret scanning + push protection on. | ✅ `main` protected: no force-push or deletion |
+| **Repo** | One repo, `main` is production. README, MIT license, CI, secret scanning + push protection on. | ⏳ "Protect main" ruleset (no force-push or deletion) waiting on Alonso's GitHub email confirmation |
 | **Commit** | Small, single-purpose commits; message rules below; CI must pass. | ✅ |
 | **Auth** | Supabase email + password. Every table has row-level security; the database decides who can read/write, not the UI. | ✅ (leaked-password check: off, Supabase dashboard) |
 | **Context window** | This file + `supabase/README.md`. Update both when the architecture or rules change. | ✅ |
 | **Localhost & deploy** | `npm run dev` in `client/`. Push to `main` → GitHub Actions CI + Vercel deploys automatically. | ✅ (local dev uses the production database: separate dev database pending) |
 | **Database** | Schema as code in `supabase/migrations`, 76 rule tests in `supabase/tests`, run in CI. | ✅ (backups: Phase 5) |
 | **API & API keys** | `/api/recommendations` (Gemini, server-only key, 10 requests/user/hour), `/api/health`. NHTSA VIN decoding needs no key. Supabase publishable key is public by design. | ✅ (Gemini key: not set in Vercel yet) |
-| **Checkpoint** | Tagged releases (`vX.Y.Z`) mark known-good versions of `main`; rollback steps below. | ✅ Latest: v0.4.0 |
+| **Checkpoint** | Tagged releases (`vX.Y.Z`) mark known-good versions of `main`; rollback steps below. | ⏳ v0.4.0 is ready: Alonso creates the tag + release on GitHub from `main` (notes in CHANGELOG.md). Vercel rollback and `git revert` work today |
 
 ## Architecture
 
