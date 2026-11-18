@@ -7,6 +7,15 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 const storage = { list: vi.fn(async () => ({ data: [], error: null })), getPublicUrl: () => ({ data: { publicUrl: '' } }) }
 vi.mock('../src/lib/supabase', () => ({ supabase: { auth: {}, from: () => ({}), storage: { from: () => storage } } }))
+// 3D: jsdom has no WebGL, so tests choose whether the browser "has" it and what the viewer does
+const gl = vi.hoisted(() => ({ available: false, viewerThrows: false }))
+vi.mock('../src/lib/car3d/webgl', () => ({ hasWebGL: () => gl.available }))
+vi.mock('../src/components/garage/CarViewer', () => ({
+  default: (p) => {
+    if (gl.viewerThrows) throw new Error('WebGL context could not be created')
+    return <div data-testid="viewer" data-style={p.bodyStyle ?? ''} data-color={p.color ?? ''} />
+  },
+}))
 const { useGarageStore } = await import('../src/store/useGarageStore')
 const { useAuthStore } = await import('../src/store/useAuthStore')
 const { default: VehicleDetailPage } = await import('../src/pages/VehicleDetailPage')
@@ -26,11 +35,15 @@ async function render(ui) {
   await act(async () => { root.render(ui) })
   return container
 }
-afterEach(async () => { await act(async () => root.unmount()); container.remove() })
+afterEach(async () => {
+  await act(async () => root.unmount())
+  container.remove()
+  Object.assign(gl, { available: false, viewerThrows: false })
+})
 
-async function pageAs(userId) {
+async function pageAs(userId, vehicle = car) {
   useAuthStore.setState({ user: { id: userId }, loading: false })
-  useGarageStore.setState({ activeVehicle: car, loading: false, error: null, fetchVehicleById: async () => {} })
+  useGarageStore.setState({ activeVehicle: vehicle, loading: false, error: null, fetchVehicleById: async () => {} })
   return render(
     <MemoryRouter initialEntries={['/vehicle/v1']}>
       <Routes><Route path="/vehicle/:id" element={<VehicleDetailPage />} /></Routes>
@@ -83,6 +96,43 @@ describe('build page: visitors get a read-only view', () => {
     )
     expect(el.textContent).toContain('link may be broken')
     expect(el.textContent).toContain('Back to your garage')
+  })
+})
+
+describe('build page: 3D garage', () => {
+  const settle = () => act(async () => { await new Promise(r => setTimeout(r, 0)) }) // lets the lazy 3D chunk resolve
+
+  it('shows the cover photo and no 3D switch when the browser can’t do 3D', async () => {
+    const el = await pageAs('visitor')
+    expect(el.querySelector('img')).not.toBeNull()
+    expect(el.querySelector('[data-testid="viewer"]')).toBeNull()
+    expect([...el.querySelectorAll('button')].some(b => b.textContent.trim() === '3D')).toBe(false)
+  })
+
+  it('shows the car in 3D with its body style and paint, and switches to the photo and back', async () => {
+    gl.available = true
+    const el = await pageAs('visitor', { ...car, body_style: 'sedan', color: '#1F4E79' })
+    await settle()
+    const viewer = el.querySelector('[data-testid="viewer"]')
+    expect(viewer.dataset.style).toBe('sedan')
+    expect(viewer.dataset.color).toBe('#1F4E79')
+    await click(el, 'Photo')
+    expect(el.querySelector('[data-testid="viewer"]')).toBeNull()
+    expect(el.querySelector('img')).not.toBeNull()
+    await click(el, '3D')
+    await settle()
+    expect(el.querySelector('[data-testid="viewer"]')).not.toBeNull()
+  })
+
+  it('falls back to the cover photo if 3D fails to start', async () => {
+    gl.available = true
+    gl.viewerThrows = true
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {}) // React logs the caught error
+    const el = await pageAs('visitor')
+    await settle()
+    expect(el.querySelector('img')).not.toBeNull()
+    expect(el.textContent).toContain('2019 Subaru WRX') // the rest of the page still works
+    quiet.mockRestore()
   })
 })
 
