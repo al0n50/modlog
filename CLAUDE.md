@@ -18,7 +18,7 @@ Social, search and the mobile app come after v1.
 |---|---|---|
 | **Frontend & backend** | React 19 + Vite SPA (`client/src`) in the browser. Backend = Supabase (Postgres, Auth, Storage) + Vercel serverless functions (`client/api`). | ✅ |
 | **Repo** | One repo, `main` is production. README, MIT license, CI, secret scanning + push protection on. | ⏳ "Protect main" ruleset (no force-push or deletion) waiting on Alonso's GitHub email confirmation |
-| **Commit** | Small, single-purpose commits; message rules below; CI must pass. | ✅ |
+| **Commit** | Every change is a pull request with a Vercel preview URL, a full self-review of the diff and green CI before merging (see "How we ship"). | ✅ |
 | **Auth** | Supabase email + password. Every table has row-level security; the database decides who can read/write, not the UI. | ✅ (leaked-password check: off, Supabase dashboard) |
 | **Context window** | This file + `supabase/README.md`. Update both when the architecture or rules change. | ✅ |
 | **Localhost & deploy** | `npm run dev` in `client/`. Push to `main` → GitHub Actions CI + Vercel deploys automatically. | ✅ (local dev uses the production database: separate dev database pending) |
@@ -97,16 +97,26 @@ PGHOST=/tmp PGPORT=55432 PGUSER=postgres scripts/db-test.sh
 - Product decisions (scope, 3D sources, dropping tables, paid services) go to Alonso.
 - Repo rules: one repo per project; never delete existing repos; no duplicate repos or clones.
 
-## Commits
+## How we ship: every change is a pull request
 
-- Summary line: imperative, ≤ 72 characters, says what changed ("Fix sign-in redirect on page load").
-- Body: why, and what was found or tested. Note anything applied to production.
-- One logical change per commit. CI green before merging to `main`.
+1. **Branch** from `main`: `feat/…`, `fix/…`, `docs/…` or `chore/…`. Nothing is pushed straight to `main`.
+2. **Commit small.** Summary line imperative, ≤ 72 characters; body says why and what was tested.
+3. **Review before every commit.** Read the whole staged diff (`git diff --staged`) line by line.
+   Every line must be explainable: what it does and why it's needed. If a line can't be explained,
+   it doesn't get committed. Generated files (lockfiles) are checked for unexpected changes.
+4. **Open a pull request** (the template has the checklist). CI runs, and Vercel posts a
+   **preview URL** for the PR. Test the change on the preview, not only on localhost.
+5. **Merge** (squash) only when CI is green, the preview has been checked and the review is done.
+   Merging deploys `main` to production; check the live site afterwards.
+6. **Finish a feature** with a `CHANGELOG.md` entry and a tagged release.
+7. **Database changes** go in the same PR. Previews and production share one database, so
+   migrations must be additive and backward-compatible: apply after review, before merging.
+   Removing old columns or tables waits for a later PR, once no code uses them.
 
 ## Checkpoints & rollback
 
 - **Code:** each known-good state of `main` is tagged `vX.Y.Z` with a GitHub release.
-  Undo a bad change with `git revert <sha>` and push. Never force-push `main`.
+  Undo a bad change with a revert pull request (`git revert <sha>` on a branch). Never force-push `main`.
 - **Deploy:** Vercel → Deployments → pick the last good one → **Instant Rollback**.
 - **Database:** migrations are forward-only. Undo with a new migration. Data backups: Phase 5.
 
