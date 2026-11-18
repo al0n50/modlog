@@ -2,6 +2,16 @@
 
 Known-good versions of `main`. Each one gets a git tag and a GitHub release.
 
+## v0.5.0: Photo showcase (2026-11-18)
+
+**What's in it**
+- **Your car's photo is the showcase:** upload it from your phone or computer on the build page ("📷 Change photo"), or pick any gallery photo as the cover. A car with no photo asks its owner to add one.
+- **Phone photos just work:** photos are shrunk on the device to 2000 px JPEG before upload, so big phone photos fit the 5 MB limit and pages load fast (a 17 MB photo became 276 KB in testing).
+- **Gallery on phones:** "Cover" and delete are reachable on touch screens, and the current cover is marked.
+- **3D garage removed:** the low-detail 3D cars (#16) were reverted (#17). 3D waits for licensed models.
+
+**Known gaps:** stock photos matched from the VIN wait for a paid image service (Alonso's call). The AI advisor still needs `GEMINI_API_KEY` in Vercel.
+
 ## v0.4.0: Foundation (2026-11-17)
 
 **What's in it**

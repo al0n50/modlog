@@ -6,10 +6,11 @@ what ModLog is, how it fits together, how to run it, and the rules that keep it 
 ## What it is
 
 A garage for car people: add your **exact car**, log the **mods you've done**, plan the
-**mods you want**, and (next) see the build on a **3D model of your car**.
+**mods you want**, and show the car off with **its photo**.
 Owner: Alonso Ochoa (@al0n50). Live: https://modlog.vercel.app
 
-v1 scope: exact car (VIN or manual) → done mods → planned mods → photos/timeline → 3D garage.
+v1 scope (docs/PRD.md): photo showcase → build map → shareable build page. 3D waits for licensed
+models; stock photos from the VIN wait for a budget (both Alonso's call).
 Social, search and the mobile app come after v1.
 
 ## The foundation (status)
@@ -48,8 +49,10 @@ Browser ─────────────► NHTSA vPIC (VIN decoding, pub
 - `mods`: one table; `status` = `done` | `planned`; category = the car area
 - `build_events`: timeline, **written by a database trigger**. Clients cannot insert.
 - `vehicle_summaries` (view): counts, totals, latest mods, owner, for feeds
-- `car_models` + `car_model_for(vehicle_id)`: 3D catalog (Option B: exact model for popular
-  cars, body-style model in the car's paint color for the rest)
+- `car_models` + `car_model_for(vehicle_id)`: 3D catalog (Option B), on hold: no models until
+  they're licensed. The low-poly 3D attempt (PR #16) was reverted in #17 and stays in git history.
+- Showcase photo: `vehicles.cover_image`, uploaded to the owner's `vehicle-photos` folder after
+  `lib/photos.js` shrinks it to 2000 px on the device. `hasRealCover()` ignores old placeholders.
 - `ai_requests`: AI usage log for rate limiting
 - Legacy, unused: `wishlist_items`, `vehicle_photos` (dropping them is pending a decision)
 
@@ -60,7 +63,7 @@ cd client
 cp .env.example .env.local   # fill in VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
 npm ci
 npm run dev                  # http://localhost:5173
-npm test                     # Vitest (66 tests)
+npm test                     # Vitest (78 tests)
 npm run lint && npm run build
 ```
 ⚠️ Until a separate dev database exists, `.env.local` points at **production**. Use a test car
@@ -128,5 +131,5 @@ one at a time.
 ## Roadmap
 
 Phases 1–4 done (schema as code, data model, security, data layer). Next: **Phase 5:
-reliability** (backups/export, error monitoring), then **Phase 6: features** (3D garage viewer,
+reliability** (backups/export, error monitoring), then **Phase 6: features** (licensed 3D models,
 demo garage, search, mobile). Plan lives on the project whiteboard.

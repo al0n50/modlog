@@ -129,7 +129,7 @@ Start with [`CLAUDE.md`](CLAUDE.md): architecture, how to run and deploy, databa
 
 ## Status
 
-🚧 **In active development** — core garage, mod tracking, Supabase auth, and AI Advisor are functional. Next: the 3D garage and the shared data-access layer.
+🚧 **In active development** — core garage, mod tracking, Supabase auth, and AI Advisor are functional. Next: the build map (mods on the car) and a shareable build page.
 
 ---
 
