@@ -53,9 +53,9 @@ export default function PhotoGallery({ vehicle, canEdit = false }) {
   }
 
   const handleSetCover = async (url) => {
+    setError('')
     try {
       await updateCoverImage(vehicle.id, url)
-      alert('Cover photo updated!')
     } catch (e) { setError(e.message) }
   }
 
@@ -139,13 +139,16 @@ export default function PhotoGallery({ vehicle, canEdit = false }) {
                 className="w-full h-full object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => setLightbox(photo.url)}
               />
-              {/* Hover overlay */}
-              {canEdit && <div className="absolute inset-0 rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <button
+              {vehicle.cover_image === photo.url && (
+                <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-md pointer-events-none">Cover</span>
+              )}
+              {/* Owner actions: always shown on touch screens (no hover there), on hover with a mouse */}
+              {canEdit && <div className="absolute inset-x-0 bottom-0 p-1.5 rounded-b-xl bg-gradient-to-t from-black/70 to-transparent flex items-center justify-end gap-1.5 sm:inset-0 sm:p-0 sm:rounded-xl sm:bg-black/50 sm:bg-none sm:justify-center sm:gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                {vehicle.cover_image !== photo.url && <button
                   onClick={() => handleSetCover(photo.url)}
                   className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-2 py-1 rounded-lg transition-colors"
                   title="Set as cover"
-                >🖼 Cover</button>
+                >🖼 Cover</button>}
                 <button
                   onClick={() => handleDelete(photo)}
                   className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded-lg transition-colors"

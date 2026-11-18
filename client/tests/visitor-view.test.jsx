@@ -5,7 +5,11 @@ import { createRoot } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
-const storage = { list: vi.fn(async () => ({ data: [], error: null })), getPublicUrl: () => ({ data: { publicUrl: '' } }) }
+const storage = {
+  list: vi.fn(async () => ({ data: [], error: null })),
+  upload: vi.fn(async () => ({ error: null })),
+  getPublicUrl: (p) => ({ data: { publicUrl: p ? `https://cdn.test/${p}` : '' } }),
+}
 vi.mock('../src/lib/supabase', () => ({ supabase: { auth: {}, from: () => ({}), storage: { from: () => storage } } }))
 const { useGarageStore } = await import('../src/store/useGarageStore')
 const { useAuthStore } = await import('../src/store/useAuthStore')
@@ -28,9 +32,9 @@ async function render(ui) {
 }
 afterEach(async () => { await act(async () => root.unmount()); container.remove() })
 
-async function pageAs(userId) {
+async function pageAs(userId, vehicle = car) {
   useAuthStore.setState({ user: { id: userId }, loading: false })
-  useGarageStore.setState({ activeVehicle: car, loading: false, error: null, fetchVehicleById: async () => {} })
+  useGarageStore.setState({ activeVehicle: vehicle, loading: false, error: null, fetchVehicleById: async () => {} })
   return render(
     <MemoryRouter initialEntries={['/vehicle/v1']}>
       <Routes><Route path="/vehicle/:id" element={<VehicleDetailPage />} /></Routes>
@@ -45,7 +49,7 @@ const click = async (el, text) => {
 describe('build page: visitors get a read-only view', () => {
   it('shows the owner their controls', async () => {
     const el = await pageAs('owner')
-    expect(el.textContent).toContain('Edit Photo')
+    expect(el.textContent).toContain('Change photo')
     expect(el.textContent).toContain('🌎 Public')
     expect(el.textContent).toContain('AI Build Advisor')
     await click(el, 'Mods')
@@ -55,7 +59,9 @@ describe('build page: visitors get a read-only view', () => {
   it('hides every owner control from a visitor to a public build', async () => {
     const el = await pageAs('visitor')
     expect(el.textContent).toContain('2019 Subaru WRX')
-    expect(el.textContent).not.toContain('Edit Photo')
+    expect(el.textContent).not.toContain('Change photo')
+    expect(el.textContent).not.toContain('Add a photo of your car')
+    expect(el.querySelector('input[type="file"]')).toBeNull()
     expect(el.textContent).not.toContain('🌎 Public')
     expect(el.textContent).not.toContain('AI Build Advisor')
     await click(el, 'Mods')
@@ -83,6 +89,37 @@ describe('build page: visitors get a read-only view', () => {
     )
     expect(el.textContent).toContain('link may be broken')
     expect(el.textContent).toContain('Back to your garage')
+  })
+})
+
+describe('build page: showcase photo', () => {
+  it('invites the owner to add a photo when the car has none, and uploads it as the cover', async () => {
+    const updateCoverImage = vi.fn(async () => {})
+    useGarageStore.setState({ updateCoverImage })
+    const el = await pageAs('owner')
+    expect(el.textContent).toContain('Add a photo of your car')
+    const input = el.querySelector('input[type="file"]')
+    const photo = new File([new Uint8Array(2000)], 'wrx.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(input, 'files', { value: [photo], configurable: true })
+    await act(async () => { input.dispatchEvent(new Event('change', { bubbles: true })) })
+    expect(storage.upload).toHaveBeenCalledWith(expect.stringMatching(/^owner\/v1\/\d+\.jpg$/), photo, expect.objectContaining({ contentType: 'image/jpeg' }))
+    expect(updateCoverImage).toHaveBeenCalledWith('v1', expect.stringMatching(/^https:\/\/cdn\.test\/owner\/v1\/\d+\.jpg$/))
+  })
+
+  it('shows a clear message instead of uploading a file that isn’t a photo', async () => {
+    storage.upload.mockClear()
+    const el = await pageAs('owner')
+    const input = el.querySelector('input[type="file"]')
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'notes.pdf', { type: 'application/pdf' })], configurable: true })
+    await act(async () => { input.dispatchEvent(new Event('change', { bubbles: true })) })
+    expect(storage.upload).not.toHaveBeenCalled()
+    expect(el.textContent).toContain('use a JPG, PNG, WebP, or HEIC photo')
+  })
+
+  it('doesn’t nag once the car has a photo', async () => {
+    const el = await pageAs('owner', { ...car, cover_image: 'https://cdn.test/owner/v1/1.jpg' })
+    expect(el.textContent).not.toContain('Add a photo of your car')
+    expect(el.querySelector('img').src).toBe('https://cdn.test/owner/v1/1.jpg')
   })
 })
 

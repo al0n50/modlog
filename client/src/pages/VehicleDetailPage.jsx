@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { useGarageStore } from '../store/useGarageStore'
@@ -11,6 +11,7 @@ import BuildTimeline from '../components/timeline/BuildTimeline'
 import AIAdvisor from '../components/garage/AIAdvisor'
 import PhotoGallery from '../components/photos/PhotoGallery'
 import { coverImage } from '../lib/vehicles'
+import { PHOTO_TYPES, uploadVehiclePhoto } from '../lib/storage'
 
 const SECTIONS = ['Overview', 'Mods', 'Wishlist', 'Timeline', 'Photos']
 
@@ -32,6 +33,8 @@ export default function VehicleDetailPage() {
   const [editingImage, setEditingImage]   = useState(false)
   const [newImageUrl, setNewImageUrl]     = useState('')
   const [savingImage, setSavingImage]     = useState(false)
+  const [imageError, setImageError]       = useState('')
+  const coverFileRef                      = useRef(null)
 
   useEffect(() => {
     if (id) fetchVehicleById(id)
@@ -57,11 +60,27 @@ export default function VehicleDetailPage() {
   const handleSaveImage = async () => {
     if (!newImageUrl.trim()) return
     setSavingImage(true)
+    setImageError('')
     try {
       await updateCoverImage(id, newImageUrl.trim())
       setEditingImage(false)
       setNewImageUrl('')
-    } catch (e) { alert(e.message) }
+    } catch (e) { setImageError(e.message) }
+    finally { setSavingImage(false) }
+  }
+
+  // The showcase photo: upload one from the phone or computer, saved in the car's photos
+  const handleUploadCover = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !activeVehicle) return
+    setSavingImage(true)
+    setImageError('')
+    try {
+      const url = await uploadVehiclePhoto(activeVehicle.user_id, activeVehicle.id, file)
+      await updateCoverImage(activeVehicle.id, url)
+      setEditingImage(false)
+    } catch (err) { setImageError(err.message || 'Upload failed. Try again.') }
     finally { setSavingImage(false) }
   }
 
@@ -113,7 +132,7 @@ export default function VehicleDetailPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-12">
 
-      {/* Hero image */}
+      {/* Hero: the car's showcase photo */}
       <div className="relative w-full h-64 bg-zinc-900">
         <img
           src={coverImage(car)}
@@ -121,7 +140,23 @@ export default function VehicleDetailPage() {
           className="w-full h-full object-cover"
           onError={e => e.target.src = 'https://placehold.co/800x400/1a1a1a/orange?text=No+Image'}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+
+        {/* No photo yet: invite the owner to add one */}
+        {isOwner && !car.cover_image && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <button
+              onClick={() => coverFileRef.current?.click()}
+              disabled={savingImage}
+              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm shadow-lg shadow-orange-500/30 transition-colors"
+            >
+              {savingImage ? 'Uploading…' : '📷 Add a photo of your car'}
+            </button>
+          </div>
+        )}
+        {isOwner && (
+          <input ref={coverFileRef} type="file" accept={PHOTO_TYPES.join(',')} className="hidden" onChange={handleUploadCover} aria-label="Upload a photo of your car" />
+        )}
 
         {/* Back button */}
         <button
@@ -147,18 +182,26 @@ export default function VehicleDetailPage() {
             onClick={() => setEditingImage(p => !p)}
             className="bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm transition-colors backdrop-blur-sm"
           >
-            📷 Edit Photo
+            📷 Change photo
           </button>
         </div>}
       </div>
 
-      {/* Edit image input */}
+      {/* Change the showcase photo: upload one, or paste a link */}
       {isOwner && editingImage && (
-        <div className="max-w-2xl mx-auto px-4 mt-3">
+        <div className="max-w-2xl mx-auto px-4 mt-3 space-y-2">
+          <button
+            onClick={() => coverFileRef.current?.click()}
+            disabled={savingImage}
+            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+          >
+            {savingImage ? 'Uploading…' : '📷 Upload a photo'}
+          </button>
+          <p className="text-xs text-zinc-500">Or paste a link to a photo:</p>
           <div className="flex gap-2">
             <input
               type="url"
-              placeholder="Paste new image URL"
+              placeholder="https://…"
               value={newImageUrl}
               onChange={e => setNewImageUrl(e.target.value)}
               className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
@@ -175,6 +218,11 @@ export default function VehicleDetailPage() {
               className="bg-zinc-700 hover:bg-zinc-600 text-white px-3 rounded-lg text-sm transition-colors"
             >✕</button>
           </div>
+        </div>
+      )}
+      {isOwner && imageError && (
+        <div className="max-w-2xl mx-auto px-4 mt-2">
+          <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded-lg px-3 py-2">{imageError}</p>
         </div>
       )}
 
