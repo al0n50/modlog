@@ -103,6 +103,12 @@ export function vehicleRow(form) {
 }
 
 // The image to show for a car: its cover photo, or a placeholder with its name
+// True when the car has a real photo. Older cars stored a generated placeholder as their "photo".
+export function hasRealCover(car) {
+  const url = (car?.cover_image || '').trim()
+  return /^https?:\/\//i.test(url) && !/^https?:\/\/placehold\.co\//i.test(url)
+}
+
 export function coverImage(car) {
   const url = (car?.cover_image || '').trim()
   if (/^https?:\/\//i.test(url)) return url

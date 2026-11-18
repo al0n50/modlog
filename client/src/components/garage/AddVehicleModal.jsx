@@ -68,8 +68,8 @@ export default function AddVehicleModal({ onSave, onClose }) {
     try {
       await onSave({
         ...vehicleRow(form),
-        cover_image: (form.cover_image || '').trim() ||
-          `https://placehold.co/600x400/1a1a1a/orange?text=${encodeURIComponent(form.make + ' ' + form.model)}`,
+        // No photo yet: leave it empty (the app draws a placeholder and asks the owner for a photo)
+        cover_image: (form.cover_image || '').trim() || null,
       })
       onClose()
     } catch (e) {
