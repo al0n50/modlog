@@ -50,9 +50,6 @@ Browser ─────────────► NHTSA vPIC (VIN decoding, pub
 - `vehicle_summaries` (view): counts, totals, latest mods, owner, for feeds
 - `car_models` + `car_model_for(vehicle_id)`: 3D catalog (Option B: exact model for popular
   cars, body-style model in the car's paint color for the rest)
-- 3D garage: body-style models are ModLog's own low-poly cars, made in code
-  (`client/src/lib/car3d`, MIT). `CarViewer` draws them with three.js, loaded only on build
-  pages; the photo is the fallback. Exact `.glb` models from the catalog come later.
 - `ai_requests`: AI usage log for rate limiting
 - Legacy, unused: `wishlist_items`, `vehicle_photos` (dropping them is pending a decision)
 
