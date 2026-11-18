@@ -116,6 +116,11 @@ describe('build page: showcase photo', () => {
     expect(el.textContent).toContain('use a JPG, PNG, WebP, or HEIC photo')
   })
 
+  it('treats an old saved placeholder as no photo', async () => {
+    const el = await pageAs('owner', { ...car, cover_image: 'https://placehold.co/600x400/1a1a1a/orange?text=Subaru%20WRX' })
+    expect(el.textContent).toContain('Add a photo of your car')
+  })
+
   it('doesn’t nag once the car has a photo', async () => {
     const el = await pageAs('owner', { ...car, cover_image: 'https://cdn.test/owner/v1/1.jpg' })
     expect(el.textContent).not.toContain('Add a photo of your car')

@@ -108,3 +108,15 @@ describe('coverImage', () => {
     expect(coverImage({ make: 'X', model: 'Y', cover_image: 'javascript:alert(1)' })).toMatch(/^https:\/\/placehold\.co\//)
   })
 })
+
+describe('hasRealCover', () => {
+  it('is true only for a real photo link', async () => {
+    const { hasRealCover } = await import('../src/lib/vehicles')
+    expect(hasRealCover({ cover_image: 'https://abc.supabase.co/storage/v1/object/public/vehicle-photos/u/v/1.jpg' })).toBe(true)
+    expect(hasRealCover({ cover_image: null })).toBe(false)
+    expect(hasRealCover({ cover_image: '  ' })).toBe(false)
+    expect(hasRealCover({})).toBe(false)
+    // Older cars saved a generated placeholder as their "photo"
+    expect(hasRealCover({ cover_image: 'https://placehold.co/600x400/1a1a1a/orange?text=Subaru%20WRX' })).toBe(false)
+  })
+})

@@ -10,7 +10,7 @@ import PromoteModModal from '../components/mods/PromoteModModal'
 import BuildTimeline from '../components/timeline/BuildTimeline'
 import AIAdvisor from '../components/garage/AIAdvisor'
 import PhotoGallery from '../components/photos/PhotoGallery'
-import { coverImage } from '../lib/vehicles'
+import { coverImage, hasRealCover } from '../lib/vehicles'
 import { PHOTO_TYPES, uploadVehiclePhoto } from '../lib/storage'
 
 const SECTIONS = ['Overview', 'Mods', 'Wishlist', 'Timeline', 'Photos']
@@ -143,7 +143,7 @@ export default function VehicleDetailPage() {
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
 
         {/* No photo yet: invite the owner to add one */}
-        {isOwner && !car.cover_image && (
+        {isOwner && !hasRealCover(car) && (
           <div className="absolute inset-0 flex items-center justify-center">
             <button
               onClick={() => coverFileRef.current?.click()}
