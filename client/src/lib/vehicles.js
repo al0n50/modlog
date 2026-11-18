@@ -27,6 +27,7 @@ export function toWishItem(mod) {
     category:        mod.category,
     brand:           mod.brand,
     estimated_price: mod.price,
+    notes:           mod.notes,
     url:             mod.url,
     priority:        mod.priority,
     created_at:      mod.created_at,

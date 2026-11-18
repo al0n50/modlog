@@ -63,7 +63,7 @@ cd client
 cp .env.example .env.local   # fill in VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
 npm ci
 npm run dev                  # http://localhost:5173
-npm test                     # Vitest (78 tests)
+npm test                     # Vitest (103 tests)
 npm run lint && npm run build
 ```
 ⚠️ Until a separate dev database exists, `.env.local` points at **production**. Use a test car

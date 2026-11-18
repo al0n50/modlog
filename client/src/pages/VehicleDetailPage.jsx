@@ -7,6 +7,7 @@ import AddModForm from '../components/mods/AddModForm'
 import AddWishForm from '../components/mods/AddWishForm'
 import ModCategoryBadge from '../components/mods/ModCategoryBadge'
 import PromoteModModal from '../components/mods/PromoteModModal'
+import EditModModal from '../components/mods/EditModModal'
 import BuildTimeline from '../components/timeline/BuildTimeline'
 import AIAdvisor from '../components/garage/AIAdvisor'
 import PhotoGallery from '../components/photos/PhotoGallery'
@@ -22,7 +23,7 @@ export default function VehicleDetailPage() {
   const {
     activeVehicle, loading, error,
     fetchVehicleById,
-    addMod, deleteMod,
+    addMod, deleteMod, updateMod,
     addWishItem, deleteWishItem, promoteWishItem,
     updateCoverImage,
     togglePublic,
@@ -30,6 +31,7 @@ export default function VehicleDetailPage() {
 
   const [section, setSection]             = useState('Overview')
   const [promoteItem, setPromoteItem]     = useState(null)
+  const [editingMod, setEditingMod]       = useState(null)
   const [editingImage, setEditingImage]   = useState(false)
   const [newImageUrl, setNewImageUrl]     = useState('')
   const [savingImage, setSavingImage]     = useState(false)
@@ -346,10 +348,18 @@ export default function VehicleDetailPage() {
                         </div>
                         {mod.notes && <p className="text-xs text-zinc-600 italic">{mod.notes}</p>}
                       </div>
-                      {isOwner && <button
-                        onClick={() => deleteMod(car.id, mod.id).catch(e => alert(e.message))}
-                        className="text-zinc-700 hover:text-red-400 text-xs transition-colors shrink-0"
-                      >✕</button>}
+                      {isOwner && <div className="flex items-center gap-3 shrink-0">
+                        <button
+                          onClick={() => setEditingMod(mod)}
+                          aria-label={`Edit ${mod.name}`}
+                          className="text-zinc-500 hover:text-orange-400 text-xs transition-colors"
+                        >✏️</button>
+                        <button
+                          onClick={() => deleteMod(car.id, mod.id).catch(e => alert(e.message))}
+                          aria-label={`Delete ${mod.name}`}
+                          className="text-zinc-700 hover:text-red-400 text-xs transition-colors"
+                        >✕</button>
+                      </div>}
                     </li>
                   ))}
                 </ul>
@@ -399,6 +409,11 @@ export default function VehicleDetailPage() {
                     className="text-xs bg-green-700 hover:bg-green-600 text-white px-2 py-0.5 rounded transition-colors"
                   >✅ Install</button>
                   <button
+                    onClick={() => setEditingMod(item)}
+                    aria-label={`Edit ${item.name}`}
+                    className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                  >✏️ Edit</button>
+                  <button
                     onClick={() => deleteWishItem(car.id, item.id).catch(e => alert(e.message))}
                     className="text-zinc-600 hover:text-red-400 text-xs text-center transition-colors"
                   >✕</button>
@@ -430,6 +445,15 @@ export default function VehicleDetailPage() {
           </div>
         )}
       </div>
+      {/* Edit any mod, done or planned */}
+      {editingMod && (
+        <EditModModal
+          mod={editingMod}
+          onSave={(row) => updateMod(car.id, editingMod.id, row)}
+          onClose={() => setEditingMod(null)}
+        />
+      )}
+
       {/* Promote modal */}
       {promoteItem && (
         <PromoteModModal

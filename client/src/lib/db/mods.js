@@ -25,6 +25,12 @@ export async function markPlannedDone(modId, details) {
   }).eq('id', modId).eq('status', 'planned').select().single())
 }
 
+// Edit any mod: name, category, brand, price, install date, notes, done or planned.
+// Only a status change is written to the timeline (by the database).
+export async function updateMod(modId, row) {
+  return run(supabase.from('mods').update(row).eq('id', modId).select().single())
+}
+
 export async function deleteMod(modId, { status } = {}) {
   let q = supabase.from('mods').delete().eq('id', modId)
   if (status) q = q.eq('status', status)

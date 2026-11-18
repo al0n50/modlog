@@ -82,4 +82,36 @@ describe('garage store: one mods table with done/planned status', () => {
     expect(v.mods.map(m => m.id)).toEqual(['w1'])
     expect(v.wishlist_items).toEqual([])
   })
+
+  it('edits a done mod in place, keeping its spot in the list', async () => {
+    useGarageStore.setState({ vehicles: [{ id: 'v1', mods: [{ id: 'm1', name: 'Intake' }, { id: 'm2', name: 'Tune' }], wishlist_items: [] }] })
+    nextResult = { data: { id: 'm1', vehicle_id: 'v1', name: 'Cold air intake', status: 'done', price: 320 }, error: null }
+    await useGarageStore.getState().updateMod('v1', 'm1', { status: 'done', name: 'Cold air intake', price: 320 })
+    const mods = calls.find(c => c.table === 'mods')
+    expect(op(mods, 'update')[1]).toEqual({ status: 'done', name: 'Cold air intake', price: 320 })
+    expect(mods.ops).toContainEqual(['eq', 'id', 'm1'])
+    expect(useGarageStore.getState().vehicles[0].mods.map(m => m.name)).toEqual(['Cold air intake', 'Tune'])
+  })
+
+  it('moves a mod to the wishlist when it goes back to planned, and back again', async () => {
+    useGarageStore.setState({ vehicles: [{ id: 'v1', mods: [{ id: 'm1', name: 'Wing', status: 'done' }], wishlist_items: [] }] })
+    nextResult = { data: { id: 'm1', vehicle_id: 'v1', name: 'Wing', status: 'planned', price: 900, notes: 'next spring' }, error: null }
+    await useGarageStore.getState().updateMod('v1', 'm1', { status: 'planned' })
+    let v = useGarageStore.getState().vehicles[0]
+    expect(v.mods).toEqual([])
+    expect(v.wishlist_items).toMatchObject([{ id: 'm1', name: 'Wing', estimated_price: 900, notes: 'next spring' }])
+
+    nextResult = { data: { id: 'm1', vehicle_id: 'v1', name: 'Wing', status: 'done', price: 950 }, error: null }
+    await useGarageStore.getState().updateMod('v1', 'm1', { status: 'done' })
+    v = useGarageStore.getState().vehicles[0]
+    expect(v.wishlist_items).toEqual([])
+    expect(v.mods).toMatchObject([{ id: 'm1', status: 'done', price: 950 }])
+  })
+
+  it('leaves the lists alone when the save fails', async () => {
+    useGarageStore.setState({ vehicles: [{ id: 'v1', mods: [{ id: 'm1', name: 'Intake' }], wishlist_items: [] }] })
+    nextResult = { data: null, error: { message: 'new row violates row-level security policy', code: '42501' } }
+    await expect(useGarageStore.getState().updateMod('v1', 'm1', { status: 'done', name: 'X' })).rejects.toThrow()
+    expect(useGarageStore.getState().vehicles[0].mods).toEqual([{ id: 'm1', name: 'Intake' }])
+  })
 })

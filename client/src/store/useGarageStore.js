@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import * as db from '../lib/db'
+import { upsertById } from '../lib/modEdit'
+import { toWishItem } from '../lib/vehicles'
 
 // Apply a change to a car wherever it's held (garage list and the open build page)
 const patchVehicle = (s, vehicleId, fn) => ({
@@ -70,6 +72,15 @@ export const useGarageStore = create((set, get) => ({
   deleteMod: async (vehicleId, modId) => {
     await db.deleteMod(modId)
     set(s => patchVehicle(s, vehicleId, v => ({ ...v, mods: v.mods.filter(m => m.id !== modId) })))
+  },
+
+  // Edit a done or planned mod; changing its status moves it between Mods and Wishlist
+  updateMod: async (vehicleId, modId, row) => {
+    const saved = await db.updateMod(modId, row)
+    set(s => patchVehicle(s, vehicleId, v => saved.status === 'planned'
+      ? { ...v, mods: v.mods.filter(m => m.id !== modId), wishlist_items: upsertById(v.wishlist_items, toWishItem(saved)) }
+      : { ...v, mods: upsertById(v.mods, saved), wishlist_items: v.wishlist_items.filter(w => w.id !== modId) }))
+    return saved
   },
 
   // ── Planned mods (the wishlist) ────────────────────────────
