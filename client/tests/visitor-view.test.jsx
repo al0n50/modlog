@@ -67,6 +67,7 @@ describe('build page: visitors get a read-only view', () => {
     await click(el, 'Mods')
     expect(el.textContent).toContain('Coilovers')
     expect(el.textContent).not.toContain('Add Mod')
+    expect(el.querySelector('[aria-label^="Edit "]')).toBeNull()
     expect([...el.querySelectorAll('button')].some(b => b.textContent.trim() === '✕')).toBe(false)
     await click(el, 'Wishlist')
     expect(el.textContent).toContain('Downpipe')
@@ -125,6 +126,39 @@ describe('build page: showcase photo', () => {
     const el = await pageAs('owner', { ...car, cover_image: 'https://cdn.test/owner/v1/1.jpg' })
     expect(el.textContent).not.toContain('Add a photo of your car')
     expect(el.querySelector('img').src).toBe('https://cdn.test/owner/v1/1.jpg')
+  })
+})
+
+describe('build page: edit a mod', () => {
+  const typeInto = async (input, value) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    await act(async () => { setter.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) })
+  }
+
+  it('lets the owner edit a mod and saves the checked changes', async () => {
+    const updateMod = vi.fn(async () => {})
+    useGarageStore.setState({ updateMod })
+    const el = await pageAs('owner')
+    await click(el, 'Mods')
+    await act(async () => el.querySelector('[aria-label="Edit Coilovers"]').click())
+    expect(el.querySelector('[role="dialog"]')).not.toBeNull()
+    await typeInto(el.querySelector('#edit-mod-name'), 'BC Racing BR coilovers')
+    await typeInto(el.querySelector('#edit-mod-price'), '$1,100')
+    await click(el, 'Save changes')
+    expect(updateMod).toHaveBeenCalledWith('v1', 'm1', expect.objectContaining({ status: 'done', name: 'BC Racing BR coilovers', category: 'Suspension', price: 1100 }))
+    expect(el.querySelector('[role="dialog"]')).toBeNull()
+  })
+
+  it('explains a bad price instead of saving', async () => {
+    const updateMod = vi.fn(async () => {})
+    useGarageStore.setState({ updateMod })
+    const el = await pageAs('owner')
+    await click(el, 'Wishlist')
+    await act(async () => el.querySelector('[aria-label="Edit Downpipe"]').click())
+    await typeInto(el.querySelector('#edit-mod-price'), 'cheap')
+    await click(el, 'Save changes')
+    expect(updateMod).not.toHaveBeenCalled()
+    expect(el.textContent).toContain('Enter the price as a number')
   })
 })
 
