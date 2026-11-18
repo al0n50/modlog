@@ -1,29 +1,20 @@
+import { extensionFor, photoError, preparePhoto } from './photos'
 import { supabase } from './supabase'
 
 const BUCKET = 'vehicle-photos'
 
-// Must match the bucket's limits in supabase/migrations (the server enforces them too)
-export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024
+export { MAX_PHOTO_BYTES, PHOTO_TYPES, photoError } from './photos'
 
-// A friendly reason a file can't be uploaded, or null if it's fine
-export function photoError(file) {
-  if (!PHOTO_TYPES.includes(file.type)) return `${file.name}: use a JPG, PNG, WebP, or HEIC photo.`
-  if (file.size > MAX_PHOTO_BYTES) return `${file.name}: photos must be 5 MB or smaller.`
-  return null
-}
-
-// Upload a file and return its public URL
-export async function uploadVehiclePhoto(userId, vehicleId, file) {
-  const bad = photoError(file)
+// Shrink the photo on the device, upload it to the owner's folder, and return its public URL
+export async function uploadVehiclePhoto(userId, vehicleId, original) {
+  const file = await preparePhoto(original)
+  const bad  = photoError(file)
   if (bad) throw new Error(bad)
-  const ext      = file.name.split('.').pop()
-  const filename = `${Date.now()}.${ext}`
-  const path     = `${userId}/${vehicleId}/${filename}`
+  const path = `${userId}/${vehicleId}/${Date.now()}.${extensionFor(file.type)}`
 
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, file, { cacheControl: '3600', upsert: false })
+    .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type })
 
   if (error) throw error
 
