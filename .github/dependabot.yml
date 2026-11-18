@@ -1,0 +1,18 @@
+# Weekly dependency update PRs. CI runs on each one; merge only when it's green.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /client
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps" }
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    commit-message: { prefix: "ci" }
+    groups:
+      actions:
+        patterns: ["*"]

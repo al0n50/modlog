@@ -121,6 +121,12 @@ The Gemini key never reaches the browser: the AI Advisor calls `/api/recommendat
 
 ---
 
+## Working on this repo
+
+Start with [`CLAUDE.md`](CLAUDE.md): architecture, how to run and deploy, database workflow, rules, and rollback steps.
+
+---
+
 ## Status
 
 🚧 **In active development** — core garage, mod tracking, Supabase auth, and AI Advisor are functional. Next: the 3D garage and the shared data-access layer.
